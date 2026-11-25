@@ -40,10 +40,17 @@ export function SettingsTab({ settings, onRefresh, onUnauthorized }: SettingsTab
   };
 
   const addPeriod = () => {
-    setPeriods((prev) => [
-      ...prev,
-      { key: `period_custom_${prev.length + 1}`, label: "新規時限", start: "18:00", end: "19:30" },
-    ]);
+    setPeriods((prev) => {
+      const existingKeys = new Set(prev.map((p) => p.key.trim()));
+      let idx = prev.length + 1;
+      while (existingKeys.has(`period_custom_${idx}`)) {
+        idx += 1;
+      }
+      return [
+        ...prev,
+        { key: `period_custom_${idx}`, label: "新規時限", start: "18:00", end: "19:30" },
+      ];
+    });
   };
 
   const removePeriod = (index: number) => {

@@ -35,6 +35,7 @@ export function SpotsTab({
   const [editRadius, setEditRadius] = useState("50");
 
   const [busy, setBusy] = useState(false);
+  const [visibleUnregisteredCount, setVisibleUnregisteredCount] = useState(20);
   const [feedback, setFeedback] = useState<{ type: "ok" | "error"; text: string } | null>(null);
 
   const jsonHeaders = { "Content-Type": "application/json" };
@@ -386,28 +387,41 @@ export function SpotsTab({
             未登録座標のセッションはありません。
           </div>
         ) : (
-          <ul className="divide-y divide-zinc-200 dark:divide-zinc-800">
-            {unregisteredSessions.slice(0, 20).map((s) => (
-              <li key={s.id} className="flex flex-wrap items-center justify-between gap-3 px-5 py-3">
-                <div className="space-y-0.5 text-xs">
-                  <div className="font-semibold">
-                    {s.category_name}（{formatJstDateHm(s.started_at)}）
+          <>
+            <ul className="divide-y divide-zinc-200 dark:divide-zinc-800">
+              {unregisteredSessions.slice(0, visibleUnregisteredCount).map((s) => (
+                <li key={s.id} className="flex flex-wrap items-center justify-between gap-3 px-5 py-3">
+                  <div className="space-y-0.5 text-xs">
+                    <div className="font-semibold">
+                      {s.category_name}（{formatJstDateHm(s.started_at)}）
+                    </div>
+                    <div className="font-mono text-zinc-500 dark:text-zinc-400">
+                      {s.latitude?.toFixed(6)}, {s.longitude?.toFixed(6)}
+                    </div>
                   </div>
-                  <div className="font-mono text-zinc-500 dark:text-zinc-400">
-                    {s.latitude?.toFixed(6)}, {s.longitude?.toFixed(6)}
-                  </div>
-                </div>
+                  <button
+                    type="button"
+                    onClick={() => prefillFromSession(s)}
+                    className="inline-flex items-center gap-1.5 rounded-lg border border-blue-500/40 bg-blue-500/10 px-3 py-1.5 text-xs font-semibold text-blue-700 transition hover:bg-blue-500/20 dark:text-blue-300"
+                  >
+                    <MapPin className="h-3.5 w-3.5" />
+                    この座標からスポット登録
+                  </button>
+                </li>
+              ))}
+            </ul>
+            {unregisteredSessions.length > visibleUnregisteredCount && (
+              <div className="border-t border-zinc-200 px-5 py-3 text-center dark:border-zinc-800">
                 <button
                   type="button"
-                  onClick={() => prefillFromSession(s)}
-                  className="inline-flex items-center gap-1.5 rounded-lg border border-blue-500/40 bg-blue-500/10 px-3 py-1.5 text-xs font-semibold text-blue-700 transition hover:bg-blue-500/20 dark:text-blue-300"
+                  onClick={() => setVisibleUnregisteredCount((c) => c + 20)}
+                  className="rounded-lg border border-zinc-200 px-4 py-1.5 text-xs font-medium text-zinc-700 transition hover:bg-zinc-100 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-800"
                 >
-                  <MapPin className="h-3.5 w-3.5" />
-                  この座標からスポット登録
+                  さらに表示（残り {unregisteredSessions.length - visibleUnregisteredCount} 件）
                 </button>
-              </li>
-            ))}
-          </ul>
+              </div>
+            )}
+          </>
         )}
       </section>
 
