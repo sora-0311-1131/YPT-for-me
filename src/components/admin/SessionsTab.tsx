@@ -9,6 +9,7 @@ import type { AdminSessionDto, CategoryRow, SpotRow } from "@/lib/types";
 interface SessionsTabProps {
   sessions: AdminSessionDto[];
   reviewSessions: AdminSessionDto[];
+  unregisteredSessions: AdminSessionDto[];
   hasMore: boolean;
   loadingMore: boolean;
   categories: CategoryRow[];
@@ -23,6 +24,7 @@ type SessionFilter = "all" | "needs_review" | "unregistered_spot";
 export function SessionsTab({
   sessions,
   reviewSessions,
+  unregisteredSessions,
   hasMore,
   loadingMore,
   categories,
@@ -58,7 +60,7 @@ export function SessionsTab({
     filter === "needs_review"
       ? reviewSessions
       : filter === "unregistered_spot"
-        ? sessions.filter((s) => s.spot_id === null && s.latitude !== null && s.longitude !== null)
+        ? unregisteredSessions
         : sessions;
 
   const handleAddSession = async (e: React.FormEvent) => {
@@ -216,11 +218,7 @@ export function SessionsTab({
               },
               {
                 key: "unregistered_spot",
-                label: `未登録スポット (${
-                  sessions.filter(
-                    (s) => s.spot_id === null && s.latitude !== null && s.longitude !== null
-                  ).length
-                })`,
+                label: `未登録スポット (${unregisteredSessions.length})`,
               },
             ] as const
           ).map(({ key, label }) => (
@@ -495,7 +493,7 @@ export function SessionsTab({
         )}
       </section>
 
-      {filter !== "needs_review" && hasMore && (
+      {filter === "all" && hasMore && (
         <div className="flex justify-center">
           <button
             type="button"
