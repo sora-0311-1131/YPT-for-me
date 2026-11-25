@@ -242,16 +242,16 @@ export function ControlTab({
       )}
 
       {/* Manual Start / Stop */}
-      <section className="rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm dark:border-zinc-800 dark:bg-zinc-900/70">
+      <section className="rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm sm:p-6 dark:border-zinc-800 dark:bg-zinc-900/70">
         <h2 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">
           手動タイマー操作
         </h2>
 
         {activeSession ? (
-          <div className="mt-4 space-y-5">
-            <div className="flex flex-wrap items-center justify-between gap-4 rounded-xl border border-zinc-200 bg-zinc-50 p-4 dark:border-zinc-800 dark:bg-zinc-950">
+          <div className="mt-4 space-y-4 sm:space-y-5">
+            <div className="flex flex-col justify-between gap-4 rounded-xl border border-zinc-200 bg-zinc-50 p-4 sm:flex-row sm:items-center dark:border-zinc-800 dark:bg-zinc-950">
               <div>
-                <div className="flex items-center gap-2">
+                <div className="flex flex-wrap items-center gap-2">
                   <span
                     className="h-2.5 w-2.5 rounded-full"
                     style={{ backgroundColor: activeSession.category_color }}
@@ -273,7 +273,7 @@ export function ControlTab({
                 type="button"
                 disabled={busy}
                 onClick={() => void handleManualStopNow()}
-                className="inline-flex items-center gap-2 rounded-xl bg-red-600 px-5 py-3 text-sm font-semibold text-white transition hover:bg-red-500 disabled:opacity-50"
+                className="inline-flex min-h-[44px] w-full items-center justify-center gap-2 rounded-xl bg-red-600 px-5 py-3 text-sm font-semibold text-white transition hover:bg-red-500 disabled:opacity-50 sm:w-auto"
               >
                 <Square className="h-4 w-4 fill-current" />
                 今すぐ計測を終了
@@ -284,19 +284,19 @@ export function ControlTab({
               <div className="text-xs font-medium text-zinc-600 dark:text-zinc-400">
                 終了し忘れ補正（終了時刻を JST で指定して確定）
               </div>
-              <div className="mt-2.5 flex flex-wrap items-center gap-2">
+              <div className="mt-2.5 flex flex-col gap-2.5 sm:flex-row sm:items-center">
                 <input
                   type="datetime-local"
                   value={customEndLocal}
                   onChange={(e) => setCustomEndLocal(e.target.value)}
                   placeholder={isoToJstDatetimeLocal(new Date().toISOString())}
-                  className="h-9 rounded-lg border border-zinc-200 bg-zinc-50 px-3 text-sm text-zinc-900 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100"
+                  className="h-11 w-full min-w-0 rounded-lg border border-zinc-200 bg-zinc-50 px-3 text-base text-zinc-900 sm:h-9 sm:w-auto sm:text-sm dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100"
                 />
                 <button
                   type="button"
                   disabled={busy || !customEndLocal}
                   onClick={() => void handleCloseWithCustomTime()}
-                  className="h-9 rounded-lg bg-zinc-900 px-4 text-xs font-semibold text-white transition hover:bg-zinc-800 disabled:opacity-50 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-200"
+                  className="h-11 w-full rounded-lg bg-zinc-900 px-4 text-xs font-semibold text-white transition hover:bg-zinc-800 disabled:opacity-50 sm:h-9 sm:w-auto dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-200"
                 >
                   指定時刻で終了
                 </button>
@@ -310,7 +310,7 @@ export function ControlTab({
               <select
                 value={selectedCategoryId}
                 onChange={(e) => setSelectedCategoryId(e.target.value)}
-                className="h-10 rounded-lg border border-zinc-200 bg-zinc-50 px-3 text-sm text-zinc-900 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100"
+                className="h-11 w-full min-w-0 rounded-lg border border-zinc-200 bg-zinc-50 px-3 text-base text-zinc-900 sm:h-10 sm:text-sm dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100"
               >
                 {activeCategories.map((c) => (
                   <option key={c.id} value={c.id}>
@@ -327,7 +327,7 @@ export function ControlTab({
                 value={memo}
                 onChange={(e) => setMemo(e.target.value)}
                 placeholder="例: 計算論レポート"
-                className="h-10 rounded-lg border border-zinc-200 bg-zinc-50 px-3 text-sm text-zinc-900 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100"
+                className="h-11 w-full min-w-0 rounded-lg border border-zinc-200 bg-zinc-50 px-3 text-base text-zinc-900 sm:h-10 sm:text-sm dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100"
               />
             </label>
 
@@ -336,7 +336,7 @@ export function ControlTab({
                 type="button"
                 disabled={busy || !selectedCategoryId}
                 onClick={() => void handleManualStart()}
-                className="inline-flex h-10 w-full items-center justify-center gap-2 rounded-lg bg-emerald-600 px-4 text-sm font-semibold text-white transition hover:bg-emerald-500 disabled:opacity-50"
+                className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-lg bg-emerald-600 px-4 text-sm font-semibold text-white transition hover:bg-emerald-500 disabled:opacity-50 sm:h-10"
               >
                 <Play className="h-4 w-4 fill-current" />
                 手動で計測開始

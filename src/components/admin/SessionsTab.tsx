@@ -207,8 +207,8 @@ export function SessionsTab({
       )}
 
       {/* Toolbar */}
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="flex items-center gap-1 rounded-xl bg-zinc-200/70 p-1 dark:bg-zinc-900">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="grid grid-cols-3 items-center gap-1 rounded-xl bg-zinc-200/70 p-1 sm:flex dark:bg-zinc-900">
           {(
             [
               { key: "all", label: `すべて (${sessions.length}${hasMore ? "+" : ""})` },
@@ -218,7 +218,7 @@ export function SessionsTab({
               },
               {
                 key: "unregistered_spot",
-                label: `未登録スポット (${unregisteredSessions.length})`,
+                label: `未登録 (${unregisteredSessions.length})`,
               },
             ] as const
           ).map(({ key, label }) => (
@@ -226,7 +226,7 @@ export function SessionsTab({
               key={key}
               type="button"
               onClick={() => setFilter(key)}
-              className={`rounded-lg px-3 py-1.5 text-xs font-medium transition ${
+              className={`truncate rounded-lg px-2 py-2 text-xs font-medium transition sm:px-3 sm:py-1.5 ${
                 filter === key
                   ? "bg-white text-zinc-900 shadow-sm dark:bg-zinc-800 dark:text-zinc-50"
                   : "text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100"
@@ -240,7 +240,7 @@ export function SessionsTab({
         <button
           type="button"
           onClick={() => setShowAddForm((v) => !v)}
-          className="inline-flex items-center gap-1.5 rounded-lg bg-zinc-900 px-3.5 py-2 text-xs font-semibold text-white transition hover:bg-zinc-800 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-200"
+          className="inline-flex h-10 w-full items-center justify-center gap-1.5 rounded-lg bg-zinc-900 px-3.5 text-xs font-semibold text-white transition hover:bg-zinc-800 sm:h-9 sm:w-auto dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-200"
         >
           <Plus className="h-3.5 w-3.5" />
           手動セッションを追加
@@ -251,16 +251,16 @@ export function SessionsTab({
       {showAddForm && (
         <form
           onSubmit={handleAddSession}
-          className="space-y-4 rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm dark:border-zinc-800 dark:bg-zinc-900/70"
+          className="space-y-4 rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm sm:p-5 dark:border-zinc-800 dark:bg-zinc-900/70"
         >
           <h3 className="text-sm font-semibold">手動セッション追加（JST）</h3>
           <div className="grid gap-3 sm:grid-cols-2">
-            <label className="flex flex-col gap-1 text-xs text-zinc-500 dark:text-zinc-400">
+            <label className="flex min-w-0 flex-col gap-1 text-xs text-zinc-500 dark:text-zinc-400">
               <span>カテゴリ</span>
               <select
                 value={addCategoryId || activeCategories[0]?.id || ""}
                 onChange={(e) => setAddCategoryId(e.target.value)}
-                className="h-9 rounded-lg border border-zinc-200 bg-zinc-50 px-2.5 text-sm text-zinc-900 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100"
+                className="h-11 w-full min-w-0 rounded-lg border border-zinc-200 bg-zinc-50 px-2.5 text-base text-zinc-900 sm:h-9 sm:text-sm dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100"
               >
                 {activeCategories.map((c) => (
                   <option key={c.id} value={c.id}>
@@ -270,12 +270,12 @@ export function SessionsTab({
               </select>
             </label>
 
-            <label className="flex flex-col gap-1 text-xs text-zinc-500 dark:text-zinc-400">
+            <label className="flex min-w-0 flex-col gap-1 text-xs text-zinc-500 dark:text-zinc-400">
               <span>スポット（任意）</span>
               <select
                 value={addSpotId}
                 onChange={(e) => setAddSpotId(e.target.value)}
-                className="h-9 rounded-lg border border-zinc-200 bg-zinc-50 px-2.5 text-sm text-zinc-900 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100"
+                className="h-11 w-full min-w-0 rounded-lg border border-zinc-200 bg-zinc-50 px-2.5 text-base text-zinc-900 sm:h-9 sm:text-sm dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100"
               >
                 <option value="">Other（未指定）</option>
                 {spots.map((sp) => (
@@ -286,25 +286,25 @@ export function SessionsTab({
               </select>
             </label>
 
-            <label className="flex flex-col gap-1 text-xs text-zinc-500 dark:text-zinc-400">
+            <label className="flex min-w-0 flex-col gap-1 text-xs text-zinc-500 dark:text-zinc-400">
               <span>開始時刻 (JST)</span>
               <input
                 type="datetime-local"
                 required
                 value={addStartLocal}
                 onChange={(e) => setAddStartLocal(e.target.value)}
-                className="h-9 rounded-lg border border-zinc-200 bg-zinc-50 px-2.5 text-sm text-zinc-900 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100"
+                className="h-11 w-full min-w-0 rounded-lg border border-zinc-200 bg-zinc-50 px-2.5 text-base text-zinc-900 sm:h-9 sm:text-sm dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100"
               />
             </label>
 
-            <label className="flex flex-col gap-1 text-xs text-zinc-500 dark:text-zinc-400">
+            <label className="flex min-w-0 flex-col gap-1 text-xs text-zinc-500 dark:text-zinc-400">
               <span>終了時刻 (JST)</span>
               <input
                 type="datetime-local"
                 required
                 value={addEndLocal}
                 onChange={(e) => setAddEndLocal(e.target.value)}
-                className="h-9 rounded-lg border border-zinc-200 bg-zinc-50 px-2.5 text-sm text-zinc-900 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100"
+                className="h-11 w-full min-w-0 rounded-lg border border-zinc-200 bg-zinc-50 px-2.5 text-base text-zinc-900 sm:h-9 sm:text-sm dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100"
               />
             </label>
           </div>
@@ -316,7 +316,7 @@ export function SessionsTab({
               value={addMemo}
               onChange={(e) => setAddMemo(e.target.value)}
               placeholder="作業メモ"
-              className="h-9 rounded-lg border border-zinc-200 bg-zinc-50 px-3 text-sm text-zinc-900 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100"
+              className="h-11 w-full rounded-lg border border-zinc-200 bg-zinc-50 px-3 text-base text-zinc-900 sm:h-9 sm:text-sm dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100"
             />
           </label>
 
@@ -324,14 +324,14 @@ export function SessionsTab({
             <button
               type="button"
               onClick={() => setShowAddForm(false)}
-              className="rounded-lg border border-zinc-200 px-3 py-1.5 text-xs font-medium dark:border-zinc-700"
+              className="h-10 rounded-lg border border-zinc-200 px-3.5 text-xs font-medium sm:h-8 dark:border-zinc-700"
             >
               キャンセル
             </button>
             <button
               type="submit"
               disabled={busy}
-              className="rounded-lg bg-blue-600 px-4 py-1.5 text-xs font-semibold text-white transition hover:bg-blue-500 disabled:opacity-50"
+              className="h-10 rounded-lg bg-blue-600 px-4 text-xs font-semibold text-white transition hover:bg-blue-500 disabled:opacity-50 sm:h-8"
             >
               追加する
             </button>
@@ -357,7 +357,7 @@ export function SessionsTab({
                         <select
                           value={editCategoryId}
                           onChange={(e) => setEditCategoryId(e.target.value)}
-                          className="h-9 rounded-lg border border-zinc-200 bg-zinc-50 px-2.5 text-sm dark:border-zinc-700 dark:bg-zinc-950"
+                          className="h-11 w-full min-w-0 rounded-lg border border-zinc-200 bg-zinc-50 px-2.5 text-base sm:h-9 sm:text-sm dark:border-zinc-700 dark:bg-zinc-950"
                         >
                           {categories.map((c) => (
                             <option key={c.id} value={c.id}>
@@ -368,7 +368,7 @@ export function SessionsTab({
                         <select
                           value={editSpotId}
                           onChange={(e) => setEditSpotId(e.target.value)}
-                          className="h-9 rounded-lg border border-zinc-200 bg-zinc-50 px-2.5 text-sm dark:border-zinc-700 dark:bg-zinc-950"
+                          className="h-11 w-full min-w-0 rounded-lg border border-zinc-200 bg-zinc-50 px-2.5 text-base sm:h-9 sm:text-sm dark:border-zinc-700 dark:bg-zinc-950"
                         >
                           <option value="">Other（スポット未紐付）</option>
                           {spots.map((sp) => (
@@ -381,13 +381,13 @@ export function SessionsTab({
                           type="datetime-local"
                           value={editStartLocal}
                           onChange={(e) => setEditStartLocal(e.target.value)}
-                          className="h-9 rounded-lg border border-zinc-200 bg-zinc-50 px-2.5 text-sm dark:border-zinc-700 dark:bg-zinc-950"
+                          className="h-11 w-full min-w-0 rounded-lg border border-zinc-200 bg-zinc-50 px-2.5 text-base sm:h-9 sm:text-sm dark:border-zinc-700 dark:bg-zinc-950"
                         />
                         <input
                           type="datetime-local"
                           value={editEndLocal}
                           onChange={(e) => setEditEndLocal(e.target.value)}
-                          className="h-9 rounded-lg border border-zinc-200 bg-zinc-50 px-2.5 text-sm dark:border-zinc-700 dark:bg-zinc-950"
+                          className="h-11 w-full min-w-0 rounded-lg border border-zinc-200 bg-zinc-50 px-2.5 text-base sm:h-9 sm:text-sm dark:border-zinc-700 dark:bg-zinc-950"
                         />
                       </div>
 
@@ -396,15 +396,16 @@ export function SessionsTab({
                         value={editMemo}
                         onChange={(e) => setEditMemo(e.target.value)}
                         placeholder="メモ（非公開）"
-                        className="h-9 w-full rounded-lg border border-zinc-200 bg-zinc-50 px-3 text-sm dark:border-zinc-700 dark:bg-zinc-950"
+                        className="h-11 w-full rounded-lg border border-zinc-200 bg-zinc-50 px-3 text-base sm:h-9 sm:text-sm dark:border-zinc-700 dark:bg-zinc-950"
                       />
 
                       <div className="flex flex-wrap items-center justify-between gap-2">
-                        <label className="inline-flex items-center gap-2 text-xs text-zinc-600 dark:text-zinc-400">
+                        <label className="inline-flex min-h-[36px] items-center gap-2 text-xs text-zinc-600 dark:text-zinc-400">
                           <input
                             type="checkbox"
                             checked={editNeedsReview}
                             onChange={(e) => setEditNeedsReview(e.target.checked)}
+                            className="h-4 w-4"
                           />
                           要確認フラグ
                         </label>
@@ -413,7 +414,7 @@ export function SessionsTab({
                           <button
                             type="button"
                             onClick={() => setEditingId(null)}
-                            className="inline-flex items-center gap-1 rounded-lg border border-zinc-200 px-3 py-1.5 text-xs dark:border-zinc-700"
+                            className="inline-flex h-10 items-center gap-1 rounded-lg border border-zinc-200 px-3 text-xs sm:h-8 dark:border-zinc-700"
                           >
                             <X className="h-3.5 w-3.5" />
                             取消
@@ -422,7 +423,7 @@ export function SessionsTab({
                             type="button"
                             disabled={busy}
                             onClick={() => void handleSaveEdit(s.id)}
-                            className="inline-flex items-center gap-1 rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-blue-500 disabled:opacity-50"
+                            className="inline-flex h-10 items-center gap-1 rounded-lg bg-blue-600 px-3 text-xs font-semibold text-white hover:bg-blue-500 disabled:opacity-50 sm:h-8"
                           >
                             <Save className="h-3.5 w-3.5" />
                             保存
@@ -465,23 +466,23 @@ export function SessionsTab({
                         )}
                       </div>
 
-                      <div className="flex items-center gap-1.5">
+                      <div className="flex shrink-0 items-center gap-1.5">
                         <button
                           type="button"
                           onClick={() => startEditing(s)}
                           aria-label="編集"
-                          className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-zinc-200 text-zinc-600 transition hover:bg-zinc-100 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-800"
+                          className="inline-flex h-10 w-10 items-center justify-center rounded-lg border border-zinc-200 text-zinc-600 transition hover:bg-zinc-100 sm:h-8 sm:w-8 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-800"
                         >
-                          <Pencil className="h-3.5 w-3.5" />
+                          <Pencil className="h-4 w-4 sm:h-3.5 sm:w-3.5" />
                         </button>
                         <button
                           type="button"
                           disabled={busy}
                           onClick={() => void handleDelete(s.id)}
                           aria-label="削除"
-                          className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-red-500/30 text-red-600 transition hover:bg-red-500/10 disabled:opacity-50 dark:text-red-400"
+                          className="inline-flex h-10 w-10 items-center justify-center rounded-lg border border-red-500/30 text-red-600 transition hover:bg-red-500/10 disabled:opacity-50 sm:h-8 sm:w-8 dark:text-red-400"
                         >
-                          <Trash2 className="h-3.5 w-3.5" />
+                          <Trash2 className="h-4 w-4 sm:h-3.5 sm:w-3.5" />
                         </button>
                       </div>
                     </div>

@@ -153,32 +153,31 @@ export function AdminShell({ onLogout }: AdminShellProps) {
   }, [loadAll]);
 
   const reviewCount = reviewSessions.length;
+  const adminTabs = [
+    { key: "control", label: "Control", shortLabel: "操作", icon: Sliders, badge: reviewCount },
+    { key: "sessions", label: "Sessions", shortLabel: "履歴", icon: ListChecks, badge: 0 },
+    { key: "categories", label: "Categories", shortLabel: "分類", icon: Tags, badge: 0 },
+    { key: "spots", label: "Spots", shortLabel: "場所", icon: MapPin, badge: 0 },
+    { key: "settings", label: "Settings", shortLabel: "設定", icon: Settings, badge: 0 },
+  ] as const;
 
   return (
     <div className="min-h-screen bg-zinc-50 text-zinc-900 dark:bg-zinc-950 dark:text-zinc-100">
       <header className="sticky top-0 z-30 border-b border-zinc-200/80 bg-white/80 backdrop-blur-md dark:border-zinc-800/80 dark:bg-zinc-950/80">
-        <div className="mx-auto flex max-w-5xl flex-wrap items-center justify-between gap-3 px-4 py-3 sm:px-6">
-          <div className="flex items-center gap-3">
+        <div className="mx-auto flex max-w-5xl items-center justify-between gap-2 px-4 py-3 sm:gap-3 sm:px-6">
+          <div className="flex min-w-0 items-center gap-2 sm:gap-3">
             <Link
               href="/"
-              className="inline-flex items-center gap-1 rounded-lg border border-zinc-200 bg-white px-2.5 py-1.5 text-xs font-medium text-zinc-600 transition hover:bg-zinc-100 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-300 dark:hover:bg-zinc-800"
+              className="inline-flex h-9 items-center gap-1 rounded-lg border border-zinc-200 bg-white px-2.5 text-xs font-medium text-zinc-600 transition hover:bg-zinc-100 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-300 dark:hover:bg-zinc-800"
             >
               <ArrowLeft className="h-3.5 w-3.5" />
-              公開画面
+              <span className="hidden sm:inline">公開画面</span>
             </Link>
-            <span className="text-sm font-bold tracking-tight">YPT Admin</span>
+            <span className="truncate text-sm font-bold tracking-tight">YPT Admin</span>
           </div>
 
-          <nav className="flex flex-wrap items-center gap-1 rounded-xl bg-zinc-100 p-1 dark:bg-zinc-900">
-            {(
-              [
-                { key: "control", label: "Control", icon: Sliders, badge: reviewCount },
-                { key: "sessions", label: "Sessions", icon: ListChecks, badge: 0 },
-                { key: "categories", label: "Categories", icon: Tags, badge: 0 },
-                { key: "spots", label: "Spots", icon: MapPin, badge: 0 },
-                { key: "settings", label: "Settings", icon: Settings, badge: 0 },
-              ] as const
-            ).map(({ key, label, icon: Icon, badge }) => (
+          <nav className="hidden items-center gap-1 rounded-xl bg-zinc-100 p-1 md:flex dark:bg-zinc-900">
+            {adminTabs.map(({ key, label, icon: Icon, badge }) => (
               <button
                 key={key}
                 type="button"
@@ -200,7 +199,7 @@ export function AdminShell({ onLogout }: AdminShellProps) {
             ))}
           </nav>
 
-          <div className="flex items-center gap-2">
+          <div className="flex shrink-0 items-center gap-2">
             <button
               type="button"
               onClick={() => void loadAll()}
@@ -217,13 +216,13 @@ export function AdminShell({ onLogout }: AdminShellProps) {
               className="inline-flex h-9 items-center gap-1 rounded-lg border border-zinc-200 bg-white px-2.5 text-xs font-medium text-zinc-600 transition hover:bg-zinc-100 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-300 dark:hover:bg-zinc-800"
             >
               <LogOut className="h-3.5 w-3.5" />
-              ロック
+              <span className="hidden sm:inline">ロック</span>
             </button>
           </div>
         </div>
       </header>
 
-      <main className="mx-auto max-w-5xl px-4 py-6 sm:px-6 sm:py-8">
+      <main className="mx-auto max-w-5xl px-4 pb-24 pt-5 sm:px-6 md:py-8">
         {error && (
           <div className="mb-4 rounded-xl border border-red-500/40 bg-red-500/10 px-4 py-3 text-sm text-red-700 dark:text-red-300">
             {error}
@@ -278,6 +277,44 @@ export function AdminShell({ onLogout }: AdminShellProps) {
           />
         )}
       </main>
+
+      {/* Mobile Bottom Navigation */}
+      <nav
+        aria-label="管理画面モバイルナビゲーション"
+        className="fixed inset-x-0 bottom-0 z-30 border-t border-zinc-200/80 bg-white/90 pb-[env(safe-area-inset-bottom)] backdrop-blur-md md:hidden dark:border-zinc-800/80 dark:bg-zinc-950/90"
+      >
+        <div className="grid grid-cols-5">
+          {adminTabs.map(({ key, shortLabel, icon: Icon, badge }) => {
+            const active = activeTab === key;
+            return (
+              <button
+                key={key}
+                type="button"
+                onClick={() => setActiveTab(key)}
+                className={`relative flex h-14 flex-col items-center justify-center gap-1 text-[10px] font-medium transition ${
+                  active
+                    ? "text-blue-600 dark:text-blue-400"
+                    : "text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100"
+                }`}
+              >
+                <span
+                  className={`relative inline-flex items-center justify-center rounded-full px-2.5 py-0.5 transition ${
+                    active ? "bg-blue-500/12 dark:bg-blue-400/15" : ""
+                  }`}
+                >
+                  <Icon className="h-4 w-4" />
+                  {badge > 0 && (
+                    <span className="absolute -right-1.5 -top-1 rounded-full bg-amber-500 px-1 text-[9px] font-bold leading-tight text-white">
+                      {badge}
+                    </span>
+                  )}
+                </span>
+                <span>{shortLabel}</span>
+              </button>
+            );
+          })}
+        </div>
+      </nav>
     </div>
   );
 }

@@ -90,13 +90,13 @@ export function HistoryView({
     <div className="space-y-4">
       {/* Filter bar */}
       <section className="rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm dark:border-zinc-800 dark:bg-zinc-900/70">
-        <div className="grid gap-3 sm:grid-cols-4">
-          <label className="flex flex-col gap-1 text-xs font-medium text-zinc-600 dark:text-zinc-400">
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+          <label className="flex min-w-0 flex-col gap-1 text-xs font-medium text-zinc-600 dark:text-zinc-400">
             <span>カテゴリ</span>
             <select
               value={selectedCategoryId}
               onChange={(e) => setSelectedCategoryId(e.target.value)}
-              className="h-9 rounded-lg border border-zinc-200 bg-zinc-50 px-2.5 text-sm text-zinc-900 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100"
+              className="h-11 w-full min-w-0 rounded-lg border border-zinc-200 bg-zinc-50 px-2.5 text-base text-zinc-900 sm:h-9 sm:text-sm dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100"
             >
               <option value="">すべて</option>
               {categories.map((cat) => (
@@ -108,12 +108,12 @@ export function HistoryView({
             </select>
           </label>
 
-          <label className="flex flex-col gap-1 text-xs font-medium text-zinc-600 dark:text-zinc-400">
+          <label className="flex min-w-0 flex-col gap-1 text-xs font-medium text-zinc-600 dark:text-zinc-400">
             <span>場所</span>
             <select
               value={selectedLocation}
               onChange={(e) => setSelectedLocation(e.target.value)}
-              className="h-9 rounded-lg border border-zinc-200 bg-zinc-50 px-2.5 text-sm text-zinc-900 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100"
+              className="h-11 w-full min-w-0 rounded-lg border border-zinc-200 bg-zinc-50 px-2.5 text-base text-zinc-900 sm:h-9 sm:text-sm dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100"
             >
               <option value="">すべて</option>
               {locations.map((loc) => (
@@ -124,13 +124,13 @@ export function HistoryView({
             </select>
           </label>
 
-          <label className="flex flex-col gap-1 text-xs font-medium text-zinc-600 dark:text-zinc-400">
+          <label className="flex min-w-0 flex-col gap-1 text-xs font-medium text-zinc-600 dark:text-zinc-400">
             <span>論理日付</span>
             <input
               type="date"
               value={selectedDate}
               onChange={(e) => setSelectedDate(e.target.value)}
-              className="h-9 rounded-lg border border-zinc-200 bg-zinc-50 px-2.5 text-sm text-zinc-900 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100"
+              className="h-11 w-full min-w-0 rounded-lg border border-zinc-200 bg-zinc-50 px-2.5 text-base text-zinc-900 sm:h-9 sm:text-sm dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100"
             />
           </label>
 
@@ -145,7 +145,7 @@ export function HistoryView({
               <button
                 type="button"
                 onClick={resetFilters}
-                className="inline-flex h-9 items-center gap-1 rounded-lg border border-zinc-200 bg-zinc-50 px-3 text-xs font-medium text-zinc-700 transition hover:bg-zinc-100 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-300 dark:hover:bg-zinc-800"
+                className="inline-flex h-11 items-center gap-1 rounded-lg border border-zinc-200 bg-zinc-50 px-3 text-xs font-medium text-zinc-700 transition hover:bg-zinc-100 sm:h-9 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-300 dark:hover:bg-zinc-800"
               >
                 <RotateCcw className="h-3.5 w-3.5" />
                 クリア
@@ -183,7 +183,7 @@ export function HistoryView({
               return (
                 <li
                   key={session.id}
-                  className="flex flex-wrap items-center justify-between gap-3 px-5 py-4"
+                  className="flex flex-wrap items-center justify-between gap-3 px-4 py-3.5 sm:px-5 sm:py-4"
                 >
                   <div className="min-w-0 space-y-1">
                     <div className="flex flex-wrap items-center gap-2">

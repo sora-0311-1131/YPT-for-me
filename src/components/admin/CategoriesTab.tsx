@@ -177,11 +177,11 @@ export function CategoriesTab({ categories, onRefresh, onUnauthorized }: Categor
       {/* Create form */}
       <form
         onSubmit={handleCreate}
-        className="space-y-4 rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm dark:border-zinc-800 dark:bg-zinc-900/70"
+        className="space-y-4 rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm sm:p-6 dark:border-zinc-800 dark:bg-zinc-900/70"
       >
         <h2 className="text-sm font-semibold">新しいカテゴリを追加</h2>
         <div className="grid gap-3 sm:grid-cols-4">
-          <label className="flex flex-col gap-1 text-xs text-zinc-500 dark:text-zinc-400 sm:col-span-2">
+          <label className="flex flex-col gap-1 text-xs text-zinc-500 sm:col-span-2 dark:text-zinc-400">
             <span>カテゴリ名</span>
             <input
               type="text"
@@ -189,25 +189,25 @@ export function CategoriesTab({ categories, onRefresh, onUnauthorized }: Categor
               value={newName}
               onChange={(e) => setNewName(e.target.value)}
               placeholder="例: 競プロ (AtCoder)"
-              className="h-9 rounded-lg border border-zinc-200 bg-zinc-50 px-3 text-sm text-zinc-900 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100"
+              className="h-11 w-full rounded-lg border border-zinc-200 bg-zinc-50 px-3 text-base text-zinc-900 sm:h-9 sm:text-sm dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100"
             />
           </label>
 
           <label className="flex flex-col gap-1 text-xs text-zinc-500 dark:text-zinc-400">
             <span>カラー</span>
-            <div className="flex h-9 items-center gap-2">
+            <div className="flex h-11 items-center gap-2 sm:h-9">
               <input
                 type="color"
                 value={newColor}
                 onChange={(e) => setNewColor(e.target.value)}
-                className="h-9 w-12 cursor-pointer rounded border border-zinc-200 bg-transparent p-0.5 dark:border-zinc-700"
+                className="h-11 w-12 cursor-pointer rounded border border-zinc-200 bg-transparent p-0.5 sm:h-9 dark:border-zinc-700"
               />
               <input
                 type="text"
                 value={newColor}
                 onChange={(e) => setNewColor(e.target.value)}
                 pattern="^#[0-9A-Fa-f]{6}$"
-                className="h-9 w-full rounded-lg border border-zinc-200 bg-zinc-50 px-2 font-mono text-xs text-zinc-900 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100"
+                className="h-11 w-full rounded-lg border border-zinc-200 bg-zinc-50 px-2 font-mono text-base text-zinc-900 sm:h-9 sm:text-xs dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100"
               />
             </div>
           </label>
@@ -219,20 +219,20 @@ export function CategoriesTab({ categories, onRefresh, onUnauthorized }: Categor
               step={1}
               value={newSortOrder}
               onChange={(e) => setNewSortOrder(e.target.value)}
-              className="h-9 rounded-lg border border-zinc-200 bg-zinc-50 px-3 text-sm text-zinc-900 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100"
+              className="h-11 w-full rounded-lg border border-zinc-200 bg-zinc-50 px-3 text-base text-zinc-900 sm:h-9 sm:text-sm dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100"
             />
           </label>
         </div>
 
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <div className="flex items-center gap-1.5">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="flex flex-wrap items-center gap-2 sm:gap-1.5">
             {PRESET_COLORS.map((hex) => (
               <button
                 key={hex}
                 type="button"
                 onClick={() => setNewColor(hex)}
                 aria-label={`カラー ${hex}`}
-                className={`h-5 w-5 rounded-full border transition ${
+                className={`h-7 w-7 rounded-full border transition sm:h-5 sm:w-5 ${
                   newColor.toLowerCase() === hex.toLowerCase()
                     ? "scale-110 border-zinc-900 ring-2 ring-zinc-400 dark:border-white"
                     : "border-transparent"
@@ -245,7 +245,7 @@ export function CategoriesTab({ categories, onRefresh, onUnauthorized }: Categor
           <button
             type="submit"
             disabled={busy || !newName.trim()}
-            className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-zinc-900 px-4 text-xs font-semibold text-white transition hover:bg-zinc-800 disabled:opacity-50 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-200"
+            className="inline-flex h-10 w-full items-center justify-center gap-1.5 rounded-lg bg-zinc-900 px-4 text-xs font-semibold text-white transition hover:bg-zinc-800 disabled:opacity-50 sm:h-9 sm:w-auto dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-200"
           >
             <Plus className="h-3.5 w-3.5" />
             追加する
@@ -270,20 +270,20 @@ export function CategoriesTab({ categories, onRefresh, onUnauthorized }: Categor
                       type="text"
                       value={editName}
                       onChange={(e) => setEditName(e.target.value)}
-                      className="h-9 rounded-lg border border-zinc-200 bg-zinc-50 px-3 text-sm dark:border-zinc-700 dark:bg-zinc-950 sm:col-span-2"
+                      className="h-11 rounded-lg border border-zinc-200 bg-zinc-50 px-3 text-base sm:col-span-2 sm:h-9 sm:text-sm dark:border-zinc-700 dark:bg-zinc-950"
                     />
                     <div className="flex items-center gap-2">
                       <input
                         type="color"
                         value={editColor}
                         onChange={(e) => setEditColor(e.target.value)}
-                        className="h-9 w-12 cursor-pointer rounded border border-zinc-200 bg-transparent p-0.5 dark:border-zinc-700"
+                        className="h-11 w-12 cursor-pointer rounded border border-zinc-200 bg-transparent p-0.5 sm:h-9 dark:border-zinc-700"
                       />
                       <input
                         type="text"
                         value={editColor}
                         onChange={(e) => setEditColor(e.target.value)}
-                        className="h-9 w-full rounded-lg border border-zinc-200 bg-zinc-50 px-2 font-mono text-xs dark:border-zinc-700 dark:bg-zinc-950"
+                        className="h-11 w-full rounded-lg border border-zinc-200 bg-zinc-50 px-2 font-mono text-base sm:h-9 sm:text-xs dark:border-zinc-700 dark:bg-zinc-950"
                       />
                     </div>
                     <div className="flex items-center gap-2">
@@ -292,13 +292,13 @@ export function CategoriesTab({ categories, onRefresh, onUnauthorized }: Categor
                         step={1}
                         value={editSortOrder}
                         onChange={(e) => setEditSortOrder(e.target.value)}
-                        className="h-9 w-20 rounded-lg border border-zinc-200 bg-zinc-50 px-2 text-sm dark:border-zinc-700 dark:bg-zinc-950"
+                        className="h-11 w-24 rounded-lg border border-zinc-200 bg-zinc-50 px-2 text-base sm:h-9 sm:w-20 sm:text-sm dark:border-zinc-700 dark:bg-zinc-950"
                       />
                       <button
                         type="button"
                         onClick={() => setEditingId(null)}
                         aria-label="キャンセル"
-                        className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-zinc-200 dark:border-zinc-700"
+                        className="inline-flex h-11 w-11 items-center justify-center rounded-lg border border-zinc-200 sm:h-9 sm:w-9 dark:border-zinc-700"
                       >
                         <X className="h-4 w-4" />
                       </button>
@@ -307,7 +307,7 @@ export function CategoriesTab({ categories, onRefresh, onUnauthorized }: Categor
                         disabled={busy}
                         onClick={() => void handleSaveEdit(cat.id)}
                         aria-label="保存"
-                        className="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-blue-600 text-white hover:bg-blue-500 disabled:opacity-50"
+                        className="inline-flex h-11 w-11 items-center justify-center rounded-lg bg-blue-600 text-white hover:bg-blue-500 disabled:opacity-50 sm:h-9 sm:w-9"
                       >
                         <Save className="h-4 w-4" />
                       </button>
@@ -315,7 +315,7 @@ export function CategoriesTab({ categories, onRefresh, onUnauthorized }: Categor
                   </div>
                 ) : (
                   <div className="flex flex-wrap items-center justify-between gap-3">
-                    <div className="flex items-center gap-3">
+                    <div className="flex min-w-0 flex-wrap items-center gap-2.5 sm:gap-3">
                       <span
                         className="h-4 w-4 shrink-0 rounded-full"
                         style={{ backgroundColor: cat.color }}
@@ -337,21 +337,21 @@ export function CategoriesTab({ categories, onRefresh, onUnauthorized }: Categor
                       )}
                     </div>
 
-                    <div className="flex items-center gap-1.5">
+                    <div className="flex shrink-0 items-center gap-1.5">
                       <button
                         type="button"
                         onClick={() => startEditing(cat)}
                         aria-label="編集"
-                        className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-zinc-200 text-zinc-600 transition hover:bg-zinc-100 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-800"
+                        className="inline-flex h-10 w-10 items-center justify-center rounded-lg border border-zinc-200 text-zinc-600 transition hover:bg-zinc-100 sm:h-8 sm:w-8 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-800"
                       >
-                        <Pencil className="h-3.5 w-3.5" />
+                        <Pencil className="h-4 w-4 sm:h-3.5 sm:w-3.5" />
                       </button>
                       <button
                         type="button"
                         disabled={busy}
                         onClick={() => void handleToggleArchive(cat)}
                         title={cat.is_archived ? "アーカイブ解除" : "アーカイブ"}
-                        className="inline-flex h-8 items-center gap-1 rounded-lg border border-zinc-200 px-2.5 text-xs font-medium text-zinc-600 transition hover:bg-zinc-100 disabled:opacity-50 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-800"
+                        className="inline-flex h-10 items-center gap-1 rounded-lg border border-zinc-200 px-3 text-xs font-medium text-zinc-600 transition hover:bg-zinc-100 disabled:opacity-50 sm:h-8 sm:px-2.5 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-800"
                       >
                         {cat.is_archived ? (
                           <>

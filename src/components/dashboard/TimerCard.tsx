@@ -51,7 +51,7 @@ export function TimerCard({ activeSession, elapsedSec, longSessionWarnMin }: Tim
 
   return (
     <>
-      <section className="relative overflow-hidden rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm dark:border-zinc-800 dark:bg-zinc-900/70">
+      <section className="relative overflow-hidden rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm sm:p-6 dark:border-zinc-800 dark:bg-zinc-900/70">
         {activeSession && (
           <div
             className="pointer-events-none absolute inset-x-0 top-0 h-1"
@@ -59,8 +59,8 @@ export function TimerCard({ activeSession, elapsedSec, longSessionWarnMin }: Tim
           />
         )}
 
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div className="flex items-center gap-2.5">
+        <div className="flex flex-wrap items-center justify-between gap-2.5 sm:gap-3">
+          <div className="flex flex-wrap items-center gap-2">
             {activeSession ? (
               <span className="inline-flex items-center gap-2 rounded-full bg-emerald-500/15 px-3 py-1 text-xs font-semibold text-emerald-600 dark:text-emerald-400">
                 <span className="h-2 w-2 animate-pulse rounded-full bg-emerald-500" />
@@ -86,14 +86,14 @@ export function TimerCard({ activeSession, elapsedSec, longSessionWarnMin }: Tim
           <button
             type="button"
             onClick={() => setPresentMode(true)}
-            className="inline-flex items-center gap-1.5 rounded-lg border border-zinc-200 bg-zinc-50 px-3 py-1.5 text-xs font-medium text-zinc-700 transition hover:bg-zinc-100 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-300 dark:hover:bg-zinc-800"
+            className="inline-flex min-h-[36px] items-center gap-1.5 rounded-lg border border-zinc-200 bg-zinc-50 px-3 py-1.5 text-xs font-medium text-zinc-700 transition hover:bg-zinc-100 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-300 dark:hover:bg-zinc-800"
           >
             <Maximize2 className="h-3.5 w-3.5" />
             LT 拡大表示
           </button>
         </div>
 
-        <div className="mt-6 flex flex-col items-center justify-center py-4 text-center">
+        <div className="mt-4 flex flex-col items-center justify-center py-2 text-center sm:mt-6 sm:py-4">
           <div className="font-mono text-5xl font-bold tracking-tight tabular-nums text-zinc-900 sm:text-7xl dark:text-zinc-50">
             {activeSession ? formatDurationHms(elapsedSec) : "00:00:00"}
           </div>
@@ -142,18 +142,18 @@ export function TimerCard({ activeSession, elapsedSec, longSessionWarnMin }: Tim
           role="dialog"
           aria-modal="true"
           aria-label="LT プレゼン用タイマー表示"
-          className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-zinc-950 p-8 text-zinc-50"
+          className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-zinc-950 p-4 text-zinc-50 sm:p-8"
         >
           <button
             type="button"
             onClick={() => setPresentMode(false)}
-            className="absolute right-6 top-6 inline-flex items-center gap-1.5 rounded-lg border border-zinc-800 bg-zinc-900 px-3 py-2 text-xs font-medium text-zinc-300 transition hover:bg-zinc-800"
+            className="absolute right-4 top-4 inline-flex min-h-[40px] items-center gap-1.5 rounded-lg border border-zinc-800 bg-zinc-900 px-3.5 py-2 text-xs font-medium text-zinc-300 transition hover:bg-zinc-800 sm:right-6 sm:top-6"
           >
             <Minimize2 className="h-4 w-4" />
-            閉じる (Esc)
+            閉じる <span className="hidden sm:inline">(Esc)</span>
           </button>
 
-          <div className="flex items-center gap-3">
+          <div className="flex flex-wrap items-center justify-center gap-2.5 sm:gap-3">
             {activeSession ? (
               <>
                 <span className="inline-flex items-center gap-2 rounded-full bg-emerald-500/20 px-4 py-1.5 text-sm font-semibold text-emerald-400">
@@ -174,12 +174,12 @@ export function TimerCard({ activeSession, elapsedSec, longSessionWarnMin }: Tim
             )}
           </div>
 
-          <div className="mt-10 font-mono text-7xl font-bold tracking-tight tabular-nums sm:text-9xl">
+          <div className="mt-8 font-mono text-5xl font-bold tracking-tight tabular-nums sm:mt-10 sm:text-8xl md:text-9xl">
             {activeSession ? formatDurationHms(elapsedSec) : "00:00:00"}
           </div>
 
           {activeSession && (
-            <div className="mt-8 flex items-center gap-4 text-base text-zinc-300">
+            <div className="mt-6 flex flex-wrap items-center justify-center gap-4 text-sm text-zinc-300 sm:mt-8 sm:text-base">
               <span className="inline-flex items-center gap-1.5">
                 <MapPin className="h-4 w-4" />
                 {activeSession.location_label}

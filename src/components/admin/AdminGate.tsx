@@ -124,14 +124,14 @@ export function AdminGate() {
           <label className="block space-y-1.5 text-xs font-medium text-zinc-600 dark:text-zinc-400">
             <span>パスコード</span>
             <div className="relative">
-              <KeyRound className="pointer-events-none absolute left-3 top-2.5 h-4 w-4 text-zinc-400" />
+              <KeyRound className="pointer-events-none absolute left-3 top-3 h-4 w-4 text-zinc-400" />
               <input
                 type="password"
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
                 placeholder="API_SECRET を入力"
                 autoComplete="current-password"
-                className="h-10 w-full rounded-lg border border-zinc-200 bg-zinc-50 pl-9 pr-3 text-sm text-zinc-900 outline-none focus:border-blue-500 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100"
+                className="h-11 w-full rounded-lg border border-zinc-200 bg-zinc-50 pl-9 pr-3 text-base text-zinc-900 outline-none focus:border-blue-500 sm:h-10 sm:text-sm dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100"
               />
             </div>
           </label>
@@ -145,7 +145,7 @@ export function AdminGate() {
           <button
             type="submit"
             disabled={submitting || !input.trim()}
-            className="h-10 w-full rounded-lg bg-zinc-900 text-sm font-semibold text-white transition hover:bg-zinc-800 disabled:opacity-50 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-200"
+            className="h-11 w-full rounded-lg bg-zinc-900 text-sm font-semibold text-white transition hover:bg-zinc-800 disabled:opacity-50 sm:h-10 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-200"
           >
             {submitting ? "検証中..." : "管理画面を開く"}
           </button>

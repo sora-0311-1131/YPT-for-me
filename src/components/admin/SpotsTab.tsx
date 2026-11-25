@@ -275,7 +275,7 @@ export function SpotsTab({
       {/* Create spot form */}
       <form
         onSubmit={handleCreate}
-        className="space-y-4 rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm dark:border-zinc-800 dark:bg-zinc-900/70"
+        className="space-y-4 rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm sm:p-6 dark:border-zinc-800 dark:bg-zinc-900/70"
       >
         <div>
           <h2 className="text-sm font-semibold">スポットを登録（完全非公開・入れ子時は最小半径優先）</h2>
@@ -293,7 +293,7 @@ export function SpotsTab({
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder="例: 大学図書館"
-              className="h-9 rounded-lg border border-zinc-200 bg-zinc-50 px-3 text-sm text-zinc-900 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100"
+              className="h-11 w-full rounded-lg border border-zinc-200 bg-zinc-50 px-3 text-base text-zinc-900 sm:h-9 sm:text-sm dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100"
             />
           </label>
 
@@ -302,7 +302,7 @@ export function SpotsTab({
             <select
               value={spotGroup}
               onChange={(e) => setSpotGroup(e.target.value as SpotGroup)}
-              className="h-9 rounded-lg border border-zinc-200 bg-zinc-50 px-2.5 text-sm text-zinc-900 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100"
+              className="h-11 w-full rounded-lg border border-zinc-200 bg-zinc-50 px-2.5 text-base text-zinc-900 sm:h-9 sm:text-sm dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100"
             >
               {SPOT_GROUPS.map((g) => (
                 <option key={g} value={g}>
@@ -321,7 +321,7 @@ export function SpotsTab({
               required
               value={radiusM}
               onChange={(e) => setRadiusM(e.target.value)}
-              className="h-9 rounded-lg border border-zinc-200 bg-zinc-50 px-3 text-sm text-zinc-900 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100"
+              className="h-11 w-full rounded-lg border border-zinc-200 bg-zinc-50 px-3 text-base text-zinc-900 sm:h-9 sm:text-sm dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100"
             />
           </label>
 
@@ -329,11 +329,12 @@ export function SpotsTab({
             <span>緯度 (Latitude)</span>
             <input
               type="text"
+              inputMode="decimal"
               required
               value={latitude}
               onChange={(e) => setLatitude(e.target.value)}
               placeholder="35.026200"
-              className="h-9 rounded-lg border border-zinc-200 bg-zinc-50 px-3 font-mono text-sm text-zinc-900 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100"
+              className="h-11 w-full rounded-lg border border-zinc-200 bg-zinc-50 px-3 font-mono text-base text-zinc-900 sm:h-9 sm:text-sm dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100"
             />
           </label>
 
@@ -341,21 +342,23 @@ export function SpotsTab({
             <span>経度 (Longitude)</span>
             <input
               type="text"
+              inputMode="decimal"
               required
               value={longitude}
               onChange={(e) => setLongitude(e.target.value)}
               placeholder="135.780800"
-              className="h-9 rounded-lg border border-zinc-200 bg-zinc-50 px-3 font-mono text-sm text-zinc-900 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100"
+              className="h-11 w-full rounded-lg border border-zinc-200 bg-zinc-50 px-3 font-mono text-base text-zinc-900 sm:h-9 sm:text-sm dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100"
             />
           </label>
         </div>
 
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <label className="inline-flex items-center gap-2 text-xs text-zinc-600 dark:text-zinc-400">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <label className="inline-flex min-h-[36px] items-center gap-2 text-xs text-zinc-600 dark:text-zinc-400">
             <input
               type="checkbox"
               checked={autoReapplyOnCreate}
               onChange={(e) => setAutoReapplyOnCreate(e.target.checked)}
+              className="h-4 w-4 shrink-0"
             />
             登録と同時に「未登録座標セッション」へ自動再適用する
           </label>
@@ -363,7 +366,7 @@ export function SpotsTab({
           <button
             type="submit"
             disabled={busy}
-            className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-zinc-900 px-4 text-xs font-semibold text-white transition hover:bg-zinc-800 disabled:opacity-50 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-200"
+            className="inline-flex h-10 w-full items-center justify-center gap-1.5 rounded-lg bg-zinc-900 px-4 text-xs font-semibold text-white transition hover:bg-zinc-800 disabled:opacity-50 sm:h-9 sm:w-auto dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-200"
           >
             <Plus className="h-3.5 w-3.5" />
             スポットを登録
@@ -390,7 +393,7 @@ export function SpotsTab({
           <>
             <ul className="divide-y divide-zinc-200 dark:divide-zinc-800">
               {unregisteredSessions.slice(0, visibleUnregisteredCount).map((s) => (
-                <li key={s.id} className="flex flex-wrap items-center justify-between gap-3 px-5 py-3">
+                <li key={s.id} className="flex flex-col justify-between gap-2.5 px-4 py-3 sm:flex-row sm:items-center sm:px-5">
                   <div className="space-y-0.5 text-xs">
                     <div className="font-semibold">
                       {s.category_name}（{formatJstDateHm(s.started_at)}）
@@ -402,7 +405,7 @@ export function SpotsTab({
                   <button
                     type="button"
                     onClick={() => prefillFromSession(s)}
-                    className="inline-flex items-center gap-1.5 rounded-lg border border-blue-500/40 bg-blue-500/10 px-3 py-1.5 text-xs font-semibold text-blue-700 transition hover:bg-blue-500/20 dark:text-blue-300"
+                    className="inline-flex h-9 w-full items-center justify-center gap-1.5 rounded-lg border border-blue-500/40 bg-blue-500/10 px-3 text-xs font-semibold text-blue-700 transition hover:bg-blue-500/20 sm:h-8 sm:w-auto dark:text-blue-300"
                   >
                     <MapPin className="h-3.5 w-3.5" />
                     この座標からスポット登録
@@ -448,12 +451,12 @@ export function SpotsTab({
                           type="text"
                           value={editName}
                           onChange={(e) => setEditName(e.target.value)}
-                          className="h-9 rounded-lg border border-zinc-200 bg-zinc-50 px-3 text-sm dark:border-zinc-700 dark:bg-zinc-950"
+                          className="h-11 rounded-lg border border-zinc-200 bg-zinc-50 px-3 text-base sm:h-9 sm:text-sm dark:border-zinc-700 dark:bg-zinc-950"
                         />
                         <select
                           value={editGroup}
                           onChange={(e) => setEditGroup(e.target.value as SpotGroup)}
-                          className="h-9 rounded-lg border border-zinc-200 bg-zinc-50 px-2.5 text-sm dark:border-zinc-700 dark:bg-zinc-950"
+                          className="h-11 rounded-lg border border-zinc-200 bg-zinc-50 px-2.5 text-base sm:h-9 sm:text-sm dark:border-zinc-700 dark:bg-zinc-950"
                         >
                           {SPOT_GROUPS.map((g) => (
                             <option key={g} value={g}>
@@ -467,26 +470,28 @@ export function SpotsTab({
                           max={50000}
                           value={editRadius}
                           onChange={(e) => setEditRadius(e.target.value)}
-                          className="h-9 rounded-lg border border-zinc-200 bg-zinc-50 px-3 text-sm dark:border-zinc-700 dark:bg-zinc-950"
+                          className="h-11 rounded-lg border border-zinc-200 bg-zinc-50 px-3 text-base sm:h-9 sm:text-sm dark:border-zinc-700 dark:bg-zinc-950"
                         />
                         <input
                           type="text"
+                          inputMode="decimal"
                           value={editLat}
                           onChange={(e) => setEditLat(e.target.value)}
-                          className="h-9 rounded-lg border border-zinc-200 bg-zinc-50 px-3 font-mono text-sm dark:border-zinc-700 dark:bg-zinc-950"
+                          className="h-11 rounded-lg border border-zinc-200 bg-zinc-50 px-3 font-mono text-base sm:h-9 sm:text-sm dark:border-zinc-700 dark:bg-zinc-950"
                         />
                         <input
                           type="text"
+                          inputMode="decimal"
                           value={editLng}
                           onChange={(e) => setEditLng(e.target.value)}
-                          className="h-9 rounded-lg border border-zinc-200 bg-zinc-50 px-3 font-mono text-sm dark:border-zinc-700 dark:bg-zinc-950"
+                          className="h-11 rounded-lg border border-zinc-200 bg-zinc-50 px-3 font-mono text-base sm:h-9 sm:text-sm dark:border-zinc-700 dark:bg-zinc-950"
                         />
                       </div>
                       <div className="flex justify-end gap-2">
                         <button
                           type="button"
                           onClick={() => setEditingId(null)}
-                          className="inline-flex items-center gap-1 rounded-lg border border-zinc-200 px-3 py-1.5 text-xs dark:border-zinc-700"
+                          className="inline-flex h-10 items-center gap-1 rounded-lg border border-zinc-200 px-3 text-xs sm:h-8 dark:border-zinc-700"
                         >
                           <X className="h-3.5 w-3.5" />
                           取消
@@ -495,7 +500,7 @@ export function SpotsTab({
                           type="button"
                           disabled={busy}
                           onClick={() => void handleSaveEdit(spot.id)}
-                          className="inline-flex items-center gap-1 rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-blue-500 disabled:opacity-50"
+                          className="inline-flex h-10 items-center gap-1 rounded-lg bg-blue-600 px-3 text-xs font-semibold text-white hover:bg-blue-500 disabled:opacity-50 sm:h-8"
                         >
                           <Save className="h-3.5 w-3.5" />
                           保存
@@ -503,7 +508,7 @@ export function SpotsTab({
                       </div>
                     </div>
                   ) : (
-                    <div className="flex flex-wrap items-center justify-between gap-3">
+                    <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-center">
                       <div className="space-y-1">
                         <div className="flex flex-wrap items-center gap-2">
                           <span className="text-sm font-semibold">{spot.name}</span>
@@ -524,7 +529,7 @@ export function SpotsTab({
                           type="button"
                           disabled={busy}
                           onClick={() => void handleManualReapply(spot, false)}
-                          className="inline-flex h-8 items-center gap-1 rounded-lg border border-zinc-200 px-2.5 text-xs font-medium text-zinc-700 transition hover:bg-zinc-100 disabled:opacity-50 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-800"
+                          className="inline-flex h-9 items-center gap-1 rounded-lg border border-zinc-200 px-2.5 text-xs font-medium text-zinc-700 transition hover:bg-zinc-100 disabled:opacity-50 sm:h-8 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-800"
                         >
                           <RefreshCw className="h-3 w-3" />
                           未登録に再適用
@@ -533,7 +538,7 @@ export function SpotsTab({
                           type="button"
                           disabled={busy}
                           onClick={() => void handleManualReapply(spot, true)}
-                          className="inline-flex h-8 items-center gap-1 rounded-lg border border-zinc-200 px-2.5 text-xs font-medium text-zinc-700 transition hover:bg-zinc-100 disabled:opacity-50 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-800"
+                          className="inline-flex h-9 items-center gap-1 rounded-lg border border-zinc-200 px-2.5 text-xs font-medium text-zinc-700 transition hover:bg-zinc-100 disabled:opacity-50 sm:h-8 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-800"
                         >
                           全件再適用
                         </button>
@@ -541,7 +546,7 @@ export function SpotsTab({
                           type="button"
                           onClick={() => startEditing(spot)}
                           aria-label="編集"
-                          className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-zinc-200 text-zinc-600 transition hover:bg-zinc-100 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-800"
+                          className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-zinc-200 text-zinc-600 transition hover:bg-zinc-100 sm:h-8 sm:w-8 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-800"
                         >
                           <Pencil className="h-3.5 w-3.5" />
                         </button>
@@ -550,7 +555,7 @@ export function SpotsTab({
                           disabled={busy}
                           onClick={() => void handleDelete(spot)}
                           aria-label="削除"
-                          className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-red-500/30 text-red-600 transition hover:bg-red-500/10 disabled:opacity-50 dark:text-red-400"
+                          className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-red-500/30 text-red-600 transition hover:bg-red-500/10 disabled:opacity-50 sm:h-8 sm:w-8 dark:text-red-400"
                         >
                           <Trash2 className="h-3.5 w-3.5" />
                         </button>

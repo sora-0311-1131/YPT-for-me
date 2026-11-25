@@ -146,17 +146,20 @@ export function DashboardShell() {
   return (
     <div className="min-h-screen bg-zinc-50 text-zinc-900 transition-colors dark:bg-zinc-950 dark:text-zinc-100">
       <header className="sticky top-0 z-30 border-b border-zinc-200/80 bg-white/80 backdrop-blur-md dark:border-zinc-800/80 dark:bg-zinc-950/80">
-        <div className="mx-auto flex max-w-5xl items-center justify-between gap-4 px-4 py-3 sm:px-6">
-          <div className="flex items-center gap-2.5">
+        <div className="mx-auto flex max-w-5xl items-center justify-between gap-3 px-4 py-3 sm:gap-4 sm:px-6">
+          <div className="flex min-w-0 items-center gap-2.5">
             <span
-              className={`h-2.5 w-2.5 rounded-full ${
+              className={`h-2.5 w-2.5 shrink-0 rounded-full ${
                 data?.active_session ? "animate-pulse bg-emerald-500" : "bg-zinc-400 dark:bg-zinc-600"
               }`}
             />
-            <span className="text-base font-bold tracking-tight">YPT for me</span>
+            <span className="truncate text-base font-bold tracking-tight">YPT for me</span>
           </div>
 
-          <nav aria-label="ダッシュボードタブ" className="flex items-center gap-1 rounded-xl bg-zinc-100 p-1 dark:bg-zinc-900">
+          <nav
+            aria-label="ダッシュボードタブ"
+            className="hidden items-center gap-1 rounded-xl bg-zinc-100 p-1 sm:flex dark:bg-zinc-900"
+          >
             {(
               [
                 { key: "overview", label: "Overview", icon: Clock },
@@ -180,7 +183,7 @@ export function DashboardShell() {
             ))}
           </nav>
 
-          <div className="flex items-center gap-2">
+          <div className="flex shrink-0 items-center gap-2">
             <button
               type="button"
               onClick={() => void fetchDashboard()}
@@ -201,7 +204,7 @@ export function DashboardShell() {
         </div>
       </header>
 
-      <main className="mx-auto max-w-5xl px-4 py-6 sm:px-6 sm:py-8">
+      <main className="mx-auto max-w-5xl px-4 pb-24 pt-5 sm:px-6 sm:py-8">
         {error && (
           <div className="mb-6 rounded-xl border border-red-500/40 bg-red-500/10 px-4 py-3 text-sm text-red-700 dark:text-red-300">
             {error}
@@ -262,6 +265,45 @@ export function DashboardShell() {
           <AnalyticsView refreshTick={refreshTick} />
         )}
       </main>
+
+      {/* Mobile Bottom Navigation */}
+      <nav
+        aria-label="モバイルナビゲーション"
+        className="fixed inset-x-0 bottom-0 z-30 border-t border-zinc-200/80 bg-white/90 pb-[env(safe-area-inset-bottom)] backdrop-blur-md sm:hidden dark:border-zinc-800/80 dark:bg-zinc-950/90"
+      >
+        <div className="grid grid-cols-3">
+          {(
+            [
+              { key: "overview", label: "Overview", icon: Clock },
+              { key: "analytics", label: "Analytics", icon: BarChart3 },
+              { key: "history", label: "History", icon: History },
+            ] as const
+          ).map(({ key, label, icon: Icon }) => {
+            const active = activeTab === key;
+            return (
+              <button
+                key={key}
+                type="button"
+                onClick={() => setActiveTab(key)}
+                className={`flex h-14 flex-col items-center justify-center gap-1 text-[11px] font-medium transition ${
+                  active
+                    ? "text-blue-600 dark:text-blue-400"
+                    : "text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100"
+                }`}
+              >
+                <span
+                  className={`inline-flex items-center justify-center rounded-full px-3.5 py-0.5 transition ${
+                    active ? "bg-blue-500/12 dark:bg-blue-400/15" : ""
+                  }`}
+                >
+                  <Icon className="h-4 w-4" />
+                </span>
+                <span>{label}</span>
+              </button>
+            );
+          })}
+        </div>
+      </nav>
     </div>
   );
 }

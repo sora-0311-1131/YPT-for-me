@@ -41,6 +41,12 @@ export function AnalyticsView({ refreshTick }: AnalyticsViewProps) {
   const [data, setData] = useState<PublicAnalyticsResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [selectedDay, setSelectedDay] = useState<CalendarDayItem | null>(null);
+  const [selectedHeatCell, setSelectedHeatCell] = useState<{
+    label: string;
+    hour: number;
+    sec: number;
+  } | null>(null);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -121,10 +127,10 @@ export function AnalyticsView({ refreshTick }: AnalyticsViewProps) {
   const visiblePressure = data.pressure.filter((p) => p.session_count > 0);
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       {/* Period Selector & Summary */}
-      <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-zinc-200 bg-white px-5 py-4 shadow-sm dark:border-zinc-800 dark:bg-zinc-900/70">
-        <div className="flex flex-wrap items-center gap-3 text-sm">
+      <div className="flex flex-col items-stretch justify-between gap-3 rounded-2xl border border-zinc-200 bg-white px-4 py-4 shadow-sm sm:flex-row sm:items-center sm:px-5 dark:border-zinc-800 dark:bg-zinc-900/70">
+        <div className="flex flex-wrap items-center justify-between gap-2 text-sm sm:justify-start sm:gap-3">
           <span className="font-semibold text-zinc-900 dark:text-zinc-100">
             集計期間: 直近 {days} 日間
           </span>
@@ -133,13 +139,13 @@ export function AnalyticsView({ refreshTick }: AnalyticsViewProps) {
           </span>
         </div>
 
-        <div className="flex items-center gap-1 rounded-xl bg-zinc-100 p-1 dark:bg-zinc-800">
+        <div className="grid grid-cols-3 items-center gap-1 rounded-xl bg-zinc-100 p-1 sm:flex dark:bg-zinc-800">
           {([30, 90, 365] as const).map((option) => (
             <button
               key={option}
               type="button"
               onClick={() => setDays(option)}
-              className={`rounded-lg px-3 py-1 text-xs font-medium transition ${
+              className={`rounded-lg px-3 py-2 text-xs font-medium transition sm:py-1 ${
                 days === option
                   ? "bg-white text-zinc-900 shadow-sm dark:bg-zinc-950 dark:text-zinc-50"
                   : "text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100"
@@ -152,7 +158,7 @@ export function AnalyticsView({ refreshTick }: AnalyticsViewProps) {
       </div>
 
       {/* 1. GitHub Grass Calendar (always 365 days) */}
-      <section className="rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm dark:border-zinc-800 dark:bg-zinc-900/70">
+      <section className="rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm sm:p-6 dark:border-zinc-800 dark:bg-zinc-900/70">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <div className="flex items-center gap-2 text-sm font-semibold">
             <Calendar className="h-4 w-4 text-emerald-500" />
@@ -176,10 +182,17 @@ export function AnalyticsView({ refreshTick }: AnalyticsViewProps) {
               <div key={wIdx} className="flex flex-col gap-1">
                 {week.map((day, dIdx) =>
                   day ? (
-                    <div
+                    <button
                       key={day.date}
+                      type="button"
+                      onClick={() => setSelectedDay(day)}
                       title={`${day.date}: ${formatDurationHm(day.total_sec)} (${day.session_count}件)`}
-                      className={`h-3 w-3 rounded-[3px] ${CALENDAR_LEVEL_CLASSES[day.level]}`}
+                      aria-label={`${day.date}: ${formatDurationHm(day.total_sec)} (${day.session_count}件)`}
+                      className={`h-3 w-3 rounded-[3px] transition ${CALENDAR_LEVEL_CLASSES[day.level]} ${
+                        selectedDay?.date === day.date
+                          ? "ring-2 ring-zinc-900 ring-offset-1 dark:ring-zinc-100 dark:ring-offset-zinc-900"
+                          : ""
+                      }`}
                     />
                   ) : (
                     <div key={`pad-${wIdx}-${dIdx}`} className="h-3 w-3" />
@@ -189,17 +202,27 @@ export function AnalyticsView({ refreshTick }: AnalyticsViewProps) {
             ))}
           </div>
         </div>
+
+        <p className="mt-2.5 text-xs text-zinc-500 dark:text-zinc-400">
+          {selectedDay ? (
+            <span className="font-mono text-zinc-700 dark:text-zinc-300">
+              {selectedDay.date}: {formatDurationHm(selectedDay.total_sec)} ({selectedDay.session_count}件)
+            </span>
+          ) : (
+            <span>セルをタップすると日別の詳細を表示します（横スクロール可）</span>
+          )}
+        </p>
       </section>
 
       {/* 2. Weekday x Hour Heatmap */}
-      <section className="rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm dark:border-zinc-800 dark:bg-zinc-900/70">
+      <section className="rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm sm:p-6 dark:border-zinc-800 dark:bg-zinc-900/70">
         <div className="flex items-center gap-2 text-sm font-semibold">
           <Clock className="h-4 w-4 text-blue-500" />
           曜日 × 時間帯ヒートマップ（JST・実時間按分）
         </div>
 
-        <div className="mt-4 overflow-x-auto">
-          <div className="min-w-[600px] space-y-1.5">
+        <div className="mt-4 overflow-x-auto pb-1">
+          <div className="min-w-[560px] space-y-1.5">
             <div className="grid grid-cols-[28px_repeat(24,minmax(0,1fr))] gap-1 text-center font-mono text-[10px] text-zinc-400">
               <span />
               {Array.from({ length: 24 }, (_, hour) => (
@@ -217,11 +240,20 @@ export function AnalyticsView({ refreshTick }: AnalyticsViewProps) {
                 </span>
                 {Array.from({ length: 24 }, (_, hour) => {
                   const sec = heatmapLookup.map.get(`${dow}:${hour}`) ?? 0;
+                  const isSelected =
+                    selectedHeatCell?.label === label && selectedHeatCell?.hour === hour;
                   return (
-                    <div
+                    <button
                       key={hour}
+                      type="button"
+                      onClick={() => setSelectedHeatCell({ label, hour, sec })}
                       title={`${label}曜 ${hour}:00台 — ${formatDurationHm(sec)}`}
-                      className={`h-5 rounded-[4px] ${heatColorClass(sec, heatmapLookup.maxSec)}`}
+                      aria-label={`${label}曜 ${hour}:00台 — ${formatDurationHm(sec)}`}
+                      className={`h-5 rounded-[4px] transition ${heatColorClass(sec, heatmapLookup.maxSec)} ${
+                        isSelected
+                          ? "ring-2 ring-zinc-900 ring-offset-1 dark:ring-zinc-100 dark:ring-offset-zinc-900"
+                          : ""
+                      }`}
                     />
                   );
                 })}
@@ -229,22 +261,32 @@ export function AnalyticsView({ refreshTick }: AnalyticsViewProps) {
             ))}
           </div>
         </div>
+
+        <p className="mt-2.5 text-xs text-zinc-500 dark:text-zinc-400">
+          {selectedHeatCell ? (
+            <span className="font-mono text-zinc-700 dark:text-zinc-300">
+              {selectedHeatCell.label}曜 {selectedHeatCell.hour}:00台 — {formatDurationHm(selectedHeatCell.sec)}
+            </span>
+          ) : (
+            <span>マスをタップすると時間帯別の累計を表示します（横スクロール可）</span>
+          )}
+        </p>
       </section>
 
       {/* 3. University Period & 4. Spot Breakdown */}
-      <div className="grid gap-6 lg:grid-cols-2">
-        <section className="rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm dark:border-zinc-800 dark:bg-zinc-900/70">
+      <div className="grid gap-4 sm:gap-6 lg:grid-cols-2">
+        <section className="rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm sm:p-6 dark:border-zinc-800 dark:bg-zinc-900/70">
           <h3 className="text-sm font-semibold">大学時限別（JST）</h3>
           <div className="mt-4 space-y-3">
             {data.univ_periods.map((item) => {
               const pct = Math.round((item.total_sec / maxPeriodSec) * 100);
               return (
                 <div key={item.key} className="space-y-1 text-xs">
-                  <div className="flex items-center justify-between">
+                  <div className="flex items-center justify-between gap-2">
                     <span className="font-medium text-zinc-700 dark:text-zinc-300">
                       {item.label}
                     </span>
-                    <span className="font-mono text-zinc-500 dark:text-zinc-400">
+                    <span className="shrink-0 font-mono text-zinc-500 dark:text-zinc-400">
                       {formatDurationHm(item.total_sec)} ({item.session_count}回)
                     </span>
                   </div>
@@ -260,7 +302,7 @@ export function AnalyticsView({ refreshTick }: AnalyticsViewProps) {
           </div>
         </section>
 
-        <section className="rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm dark:border-zinc-800 dark:bg-zinc-900/70">
+        <section className="rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm sm:p-6 dark:border-zinc-800 dark:bg-zinc-900/70">
           <div className="flex items-center gap-2 text-sm font-semibold">
             <MapPin className="h-4 w-4 text-emerald-500" />
             スポット別集中比較
@@ -299,8 +341,8 @@ export function AnalyticsView({ refreshTick }: AnalyticsViewProps) {
       </div>
 
       {/* 5. Weather & Pressure Correlation */}
-      <div className="grid gap-6 lg:grid-cols-2">
-        <section className="rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm dark:border-zinc-800 dark:bg-zinc-900/70">
+      <div className="grid gap-4 sm:gap-6 lg:grid-cols-2">
+        <section className="rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm sm:p-6 dark:border-zinc-800 dark:bg-zinc-900/70">
           <div className="flex items-center gap-2 text-sm font-semibold">
             <Cloud className="h-4 w-4 text-sky-500" />
             天気別の集中傾向
@@ -311,16 +353,16 @@ export function AnalyticsView({ refreshTick }: AnalyticsViewProps) {
               天気データ付きのセッションがありません。
             </p>
           ) : (
-            <div className="mt-4 grid gap-3 sm:grid-cols-2">
+            <div className="mt-4 grid grid-cols-2 gap-2.5 sm:gap-3">
               {visibleWeather.map((w) => (
                 <div
                   key={w.key}
-                  className="rounded-xl border border-zinc-200 bg-zinc-50 p-3.5 dark:border-zinc-800 dark:bg-zinc-950"
+                  className="rounded-xl border border-zinc-200 bg-zinc-50 p-3 sm:p-3.5 dark:border-zinc-800 dark:bg-zinc-950"
                 >
                   <div className="text-xs font-semibold text-zinc-700 dark:text-zinc-300">
                     {w.label}
                   </div>
-                  <div className="mt-1 font-mono text-lg font-bold tabular-nums">
+                  <div className="mt-1 font-mono text-base font-bold tabular-nums sm:text-lg">
                     {formatDurationHm(w.total_sec)}
                   </div>
                   <div className="mt-0.5 font-mono text-[11px] text-zinc-500 dark:text-zinc-400">
@@ -332,7 +374,7 @@ export function AnalyticsView({ refreshTick }: AnalyticsViewProps) {
           )}
         </section>
 
-        <section className="rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm dark:border-zinc-800 dark:bg-zinc-900/70">
+        <section className="rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm sm:p-6 dark:border-zinc-800 dark:bg-zinc-900/70">
           <div className="flex items-center gap-2 text-sm font-semibold">
             <Gauge className="h-4 w-4 text-amber-500" />
             気圧帯別の集中傾向
@@ -343,16 +385,16 @@ export function AnalyticsView({ refreshTick }: AnalyticsViewProps) {
               気圧データ付きのセッションがありません。
             </p>
           ) : (
-            <div className="mt-4 grid gap-3 sm:grid-cols-2">
+            <div className="mt-4 grid grid-cols-2 gap-2.5 sm:gap-3">
               {visiblePressure.map((p) => (
                 <div
                   key={p.key}
-                  className="rounded-xl border border-zinc-200 bg-zinc-50 p-3.5 dark:border-zinc-800 dark:bg-zinc-950"
+                  className="rounded-xl border border-zinc-200 bg-zinc-50 p-3 sm:p-3.5 dark:border-zinc-800 dark:bg-zinc-950"
                 >
                   <div className="text-xs font-semibold text-zinc-700 dark:text-zinc-300">
                     {p.label}
                   </div>
-                  <div className="mt-1 font-mono text-lg font-bold tabular-nums">
+                  <div className="mt-1 font-mono text-base font-bold tabular-nums sm:text-lg">
                     {formatDurationHm(p.total_sec)}
                   </div>
                   <div className="mt-0.5 font-mono text-[11px] text-zinc-500 dark:text-zinc-400">
