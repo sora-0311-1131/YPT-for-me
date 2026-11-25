@@ -18,8 +18,9 @@ import {
 } from "./types";
 
 const PAGE_SIZE = 500;
+const STREAK_CHUNK_DAYS = 365;
 const PUBLIC_SESSION_COLUMNS =
-  "id, category_id, location_label, memo, weather_code, temperature_c, pressure_hpa, day_type, univ_period, started_at, ended_at, duration_sec";
+  "id, category_id, location_label, weather_code, temperature_c, pressure_hpa, day_type, univ_period, started_at, ended_at, duration_sec";
 
 export interface CategoryBreakdownItem {
   category_id: string;
@@ -68,7 +69,6 @@ type SanitizedSessionRow = Pick<
   | "id"
   | "category_id"
   | "location_label"
-  | "memo"
   | "weather_code"
   | "temperature_c"
   | "pressure_hpa"
@@ -82,6 +82,7 @@ type SanitizedSessionRow = Pick<
 function toFullRowStub(row: SanitizedSessionRow): StudySessionRow {
   return {
     ...row,
+    memo: null,
     spot_id: null,
     tag_id: null,
     latitude: null,
@@ -235,13 +236,10 @@ export function buildDashboardSummary(params: {
   };
 }
 
-/**
- * Fetches all sanitized public session rows since `sinceIso` using keyset pagination on `id`
- * so aggregation never truncates at Supabase's 1,000-row default limit.
- */
-async function fetchSanitizedSessionsSince(
+async function fetchSanitizedSessionsInRange(
   supabase: SupabaseClient,
-  sinceIso: string
+  startIso: string,
+  endIso?: string
 ): Promise<SanitizedSessionRow[]> {
   const all: SanitizedSessionRow[] = [];
   let lastId: string | null = null;
@@ -250,10 +248,13 @@ async function fetchSanitizedSessionsSince(
     let query = supabase
       .from("study_sessions")
       .select(PUBLIC_SESSION_COLUMNS)
-      .gte("started_at", sinceIso)
+      .gte("started_at", startIso)
       .order("id", { ascending: true })
       .limit(PAGE_SIZE);
 
+    if (endIso) {
+      query = query.lt("started_at", endIso);
+    }
     if (lastId !== null) {
       query = query.gt("id", lastId);
     }
@@ -285,14 +286,14 @@ export async function getPublicDashboardData(
 ): Promise<PublicDashboardResponse> {
   const settings = await getAppSettings(supabase);
   const todayLogicalDate = getLogicalDateJst(now, settings.day_boundary_hour);
-  const lookbackStartDate = addDaysToYmd(todayLogicalDate, -365);
-  const { startIso: sinceIso } = getLogicalDayBoundsUtc(
-    lookbackStartDate,
+  let windowStartDate = addDaysToYmd(todayLogicalDate, -(STREAK_CHUNK_DAYS - 1));
+  const { startIso: initialSinceIso } = getLogicalDayBoundsUtc(
+    windowStartDate,
     settings.day_boundary_hour
   );
 
-  const [sessions, activeRes, categoriesRes] = await Promise.all([
-    fetchSanitizedSessionsSince(supabase, sinceIso),
+  const [initialSessions, activeRes, categoriesRes] = await Promise.all([
+    fetchSanitizedSessionsInRange(supabase, initialSinceIso),
     supabase
       .from("study_sessions")
       .select(PUBLIC_SESSION_COLUMNS)
@@ -309,14 +310,54 @@ export async function getPublicDashboardData(
     throw new Error("Failed to load dashboard metadata.");
   }
 
-  return buildDashboardSummary({
-    sessions,
+  const allSessions = [...initialSessions];
+  const categories = (categoriesRes.data ?? []) as Array<
+    Pick<CategoryRow, "id" | "name" | "color" | "sort_order" | "is_archived">
+  >;
+
+  // If the streak reaches the start of the loaded window, walk further back in 365-day chunks
+  // until the streak breaks or no older sessions exist.
+  let summary = buildDashboardSummary({
+    sessions: allSessions,
     activeRow: (activeRes.data as SanitizedSessionRow | null) ?? null,
-    categories: (categoriesRes.data ?? []) as Array<
-      Pick<CategoryRow, "id" | "name" | "color" | "sort_order" | "is_archived">
-    >,
+    categories,
     settings,
     now,
     filters,
   });
+
+  let loadedDays = STREAK_CHUNK_DAYS;
+  while (summary.streak_days >= loadedDays) {
+    const prevWindowEndIso = getLogicalDayBoundsUtc(
+      windowStartDate,
+      settings.day_boundary_hour
+    ).startIso;
+    windowStartDate = addDaysToYmd(windowStartDate, -STREAK_CHUNK_DAYS);
+    const prevWindowStartIso = getLogicalDayBoundsUtc(
+      windowStartDate,
+      settings.day_boundary_hour
+    ).startIso;
+
+    const olderBatch = await fetchSanitizedSessionsInRange(
+      supabase,
+      prevWindowStartIso,
+      prevWindowEndIso
+    );
+    if (olderBatch.length === 0) {
+      break;
+    }
+    allSessions.push(...olderBatch);
+    loadedDays += STREAK_CHUNK_DAYS;
+
+    summary = buildDashboardSummary({
+      sessions: allSessions,
+      activeRow: (activeRes.data as SanitizedSessionRow | null) ?? null,
+      categories,
+      settings,
+      now,
+      filters,
+    });
+  }
+
+  return summary;
 }

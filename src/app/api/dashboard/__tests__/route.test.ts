@@ -37,7 +37,6 @@ describe("buildDashboardSummary", () => {
         id: "s-prev",
         category_id: "cat-1",
         location_label: "大学図書館",
-        memo: null,
         weather_code: 0,
         temperature_c: 14,
         pressure_hpa: 1015,
@@ -52,7 +51,6 @@ describe("buildDashboardSummary", () => {
         id: "s-today",
         category_id: "cat-2",
         location_label: "Home",
-        memo: "PR #8",
         weather_code: 2,
         temperature_c: 15,
         pressure_hpa: 1012,
@@ -69,7 +67,6 @@ describe("buildDashboardSummary", () => {
       id: "s-active",
       category_id: "cat-1",
       location_label: "Home",
-      memo: null,
       weather_code: 0,
       temperature_c: 13,
       pressure_hpa: 1016,
@@ -100,6 +97,7 @@ describe("buildDashboardSummary", () => {
     const serialized = JSON.stringify(summary);
     expect(serialized).not.toContain("latitude");
     expect(serialized).not.toContain("longitude");
+    expect(serialized).not.toContain("memo");
     expect(serialized).not.toContain("spot_id");
     expect(serialized).not.toContain("start_event_id");
   });
@@ -111,7 +109,6 @@ describe("buildDashboardSummary", () => {
         id: "s1",
         category_id: "cat-1",
         location_label: "大学図書館",
-        memo: null,
         weather_code: null,
         temperature_c: null,
         pressure_hpa: null,
@@ -125,7 +122,6 @@ describe("buildDashboardSummary", () => {
         id: "s2",
         category_id: "cat-2",
         location_label: "Home",
-        memo: null,
         weather_code: null,
         temperature_c: null,
         pressure_hpa: null,
@@ -158,6 +154,11 @@ describe("GET /api/dashboard route", () => {
   it("is publicly accessible without Authorization header and validates query params", async () => {
     const badDate = await getDashboard(new Request("http://localhost/api/dashboard?date=2026/11/25"));
     expect(badDate.status).toBe(400);
+
+    const nonexistentDate = await getDashboard(
+      new Request("http://localhost/api/dashboard?date=2026-02-31")
+    );
+    expect(nonexistentDate.status).toBe(400);
 
     const badLimit = await getDashboard(new Request("http://localhost/api/dashboard?limit=999"));
     expect(badLimit.status).toBe(400);

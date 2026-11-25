@@ -66,7 +66,7 @@ export interface StudySessionRow {
 
 /**
  * Public-safe session DTO.
- * Never includes private coordinates (latitude / longitude) or internal sync IDs.
+ * Never includes private coordinates (latitude / longitude), memos, or internal sync IDs.
  */
 export interface PublicSessionDto {
   id: string;
@@ -74,7 +74,6 @@ export interface PublicSessionDto {
   category_name: string;
   category_color: string;
   location_label: string;
-  memo: string | null;
   weather_code: number | null;
   temperature_c: number | null;
   pressure_hpa: number | null;
@@ -86,6 +85,7 @@ export interface PublicSessionDto {
 }
 
 export interface AdminSessionDto extends PublicSessionDto {
+  memo: string | null;
   spot_id: string | null;
   tag_id: string | null;
   latitude: number | null;
@@ -106,7 +106,6 @@ export function toPublicSessionDto(
     category_name: category.name,
     category_color: category.color,
     location_label: row.location_label,
-    memo: row.memo,
     weather_code: row.weather_code,
     temperature_c: row.temperature_c,
     pressure_hpa: row.pressure_hpa,
@@ -124,6 +123,7 @@ export function toAdminSessionDto(
 ): AdminSessionDto {
   return {
     ...toPublicSessionDto(row, category),
+    memo: row.memo,
     spot_id: row.spot_id,
     tag_id: row.tag_id,
     latitude: row.latitude,

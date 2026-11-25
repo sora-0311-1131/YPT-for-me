@@ -35,12 +35,15 @@ describe("session DTO mappers", () => {
     expect(serialized).not.toContain("longitude");
     expect(serialized).not.toContain("35.0262");
     expect(serialized).not.toContain("135.7808");
+    expect(serialized).not.toContain("memo");
+    expect(serialized).not.toContain("計算論レポート");
     expect(serialized).not.toContain("spot_id");
     expect(serialized).not.toContain("start_event_id");
   });
 
-  it("retains private coordinates and review flags in AdminSessionDto", () => {
+  it("retains private coordinates, memo, and review flags in AdminSessionDto", () => {
     const dto = toAdminSessionDto(sampleRow, { name: "大学講義・課題", color: "#3B82F6" });
+    expect(dto.memo).toBe("計算論レポート");
     expect(dto.latitude).toBe(35.0262);
     expect(dto.longitude).toBe(135.7808);
     expect(dto.needs_review).toBe(true);
