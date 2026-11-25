@@ -155,9 +155,9 @@ create index study_sessions_needs_review_idx on study_sessions (needs_review) wh
 
 ### 3.6 RLS & プライバシー方針
 
-- 全4テーブルで **RLS を有効化**し、`anon` ロールからの直接書き込みを全面禁止。
+- 全テーブルで **RLS を有効化**し、`app_settings` / `categories` / `spots` / `study_sessions` への `anon` アクセスを全面禁止（すべてサーバー側 `service_role` 経由でアクセス）。
 - 公開ダッシュボードのデータ取得は Next.js サーバー側で `service_role` 経由取得し、**`latitude` / `longitude` および `spots` の座標カラムを完全に除外した DTO** のみを返却する。
-- Supabase Realtime は公開クライアントの再フェッチトリガー（または非機密イベント通知）として利用し、座標情報がクライアントへ露出しない設計とする。
+- **プライバシー安全な Realtime 通知（`study_realtime_signals`）**: `study_sessions` の変更時にトリガーで 1 行のタイムスタンプ専用テーブル `study_realtime_signals` のみを更新し、このテーブルだけ `anon` 読み取り許可＋`supabase_realtime` publication へ登録する。公開クライアントは更新イベントを受け取ったら `/api/dashboard` を再フェッチすることで、座標カラムを一切露出せずにリアルタイム更新を実現する。
 
 ---
 
