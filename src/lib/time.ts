@@ -153,10 +153,9 @@ export function isJapaneseHoliday(ymd: string): boolean {
 }
 
 /**
- * Classifies a timestamp into `holiday` / `weekend` / `weekday` using the logical JST date.
+ * Classifies a logical JST date (`YYYY-MM-DD`) into `holiday` / `weekend` / `weekday`.
  */
-export function getDayType(date: Date, dayBoundaryHour = 4): DayType {
-  const logicalYmd = getLogicalDateJst(date, dayBoundaryHour);
+export function getDayTypeForLogicalDate(logicalYmd: string): DayType {
   if (isJapaneseHoliday(logicalYmd)) {
     return "holiday";
   }
@@ -166,6 +165,13 @@ export function getDayType(date: Date, dayBoundaryHour = 4): DayType {
     return "weekend";
   }
   return "weekday";
+}
+
+/**
+ * Classifies a timestamp into `holiday` / `weekend` / `weekday` using the logical JST date.
+ */
+export function getDayType(date: Date, dayBoundaryHour = 4): DayType {
+  return getDayTypeForLogicalDate(getLogicalDateJst(date, dayBoundaryHour));
 }
 
 function parseHmToMinutes(hm: string): number {

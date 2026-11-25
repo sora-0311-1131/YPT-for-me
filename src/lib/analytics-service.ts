@@ -6,6 +6,7 @@ import {
 import { getAppSettings } from "./study-service";
 import {
   addDaysToYmd,
+  getDayTypeForLogicalDate,
   getJstParts,
   getLogicalDateJst,
   getLogicalDayBoundsUtc,
@@ -106,7 +107,6 @@ export function buildAnalyticsSummary(params: {
   const todayLogicalDate = getLogicalDateJst(now, settings.day_boundary_hour);
   const calendarStartDate = addDaysToYmd(todayLogicalDate, -(CALENDAR_DAYS - 1));
   const periodStartDate = addDaysToYmd(todayLogicalDate, -(days - 1));
-  const goalSec = settings.daily_goal_weekday_min * 60;
 
   // 1. Calendar (always last 365 logical days)
   const calendarAgg = new Map<string, { total_sec: number; session_count: number }>();
@@ -212,12 +212,19 @@ export function buildAnalyticsSummary(params: {
     pBucket.session_count += 1;
   }
 
-  const calendar: CalendarDayItem[] = Array.from(calendarAgg.entries()).map(([date, agg]) => ({
-    date,
-    total_sec: agg.total_sec,
-    session_count: agg.session_count,
-    level: getCalendarLevel(agg.total_sec, goalSec),
-  }));
+  const weekdayGoalSec = settings.daily_goal_weekday_min * 60;
+  const weekendGoalSec = settings.daily_goal_weekend_min * 60;
+
+  const calendar: CalendarDayItem[] = Array.from(calendarAgg.entries()).map(([date, agg]) => {
+    const goalSec =
+      getDayTypeForLogicalDate(date) === "weekday" ? weekdayGoalSec : weekendGoalSec;
+    return {
+      date,
+      total_sec: agg.total_sec,
+      session_count: agg.session_count,
+      level: getCalendarLevel(agg.total_sec, goalSec),
+    };
+  });
 
   const weekday_hour_heatmap: WeekdayHourCell[] = [];
   for (let weekday = 0; weekday < 7; weekday += 1) {
