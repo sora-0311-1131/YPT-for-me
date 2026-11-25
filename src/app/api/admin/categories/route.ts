@@ -44,8 +44,13 @@ export async function POST(request: Request): Promise<NextResponse> {
     return NextResponse.json({ error: "color must be a valid #RRGGBB hex string." }, { status: 400 });
   }
 
-  const sortOrder =
-    typeof body.sort_order === "number" && Number.isInteger(body.sort_order) ? body.sort_order : 0;
+  let sortOrder = 0;
+  if (body.sort_order !== undefined) {
+    if (typeof body.sort_order !== "number" || !Number.isInteger(body.sort_order)) {
+      return NextResponse.json({ error: "sort_order must be an integer." }, { status: 400 });
+    }
+    sortOrder = body.sort_order;
+  }
 
   const supabase = getSupabaseAdmin();
   const { data, error } = await supabase
