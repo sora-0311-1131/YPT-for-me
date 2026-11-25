@@ -28,7 +28,11 @@ export async function POST(request: Request, context: RouteContext): Promise<Nex
       if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
         return NextResponse.json({ error: "Request body must be a JSON object." }, { status: 400 });
       }
-      includeAll = Boolean((parsed as Record<string, unknown>).include_all);
+      const rawIncludeAll = (parsed as Record<string, unknown>).include_all;
+      if (rawIncludeAll !== undefined && typeof rawIncludeAll !== "boolean") {
+        return NextResponse.json({ error: "include_all must be a boolean." }, { status: 400 });
+      }
+      includeAll = rawIncludeAll ?? false;
     } catch {
       return NextResponse.json({ error: "Invalid JSON payload." }, { status: 400 });
     }

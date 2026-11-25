@@ -99,6 +99,16 @@ describe("/api/admin/* routes", () => {
     );
     expect(badSetting.status).toBe(400);
 
+    const badReapply = await postReapplySpot(
+      new Request("http://localhost/api/admin/spots/library/reapply", {
+        method: "POST",
+        headers: AUTH_HEADERS,
+        body: JSON.stringify({ include_all: "false" }),
+      }),
+      { params: Promise.resolve({ id: "library" }) }
+    );
+    expect(badReapply.status).toBe(400);
+
     const badOrder = await postSession(
       new Request("http://localhost/api/admin/sessions", {
         method: "POST",
