@@ -38,3 +38,28 @@ NFCタグ（PC貼付シール / ICOCA）× iOSショートカット × Next.js +
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Supabase Anon Key（クライアント Realtime 購読用） |
 | `SUPABASE_SERVICE_ROLE_KEY` | Supabase Service Role Key（API Route からの DB 操作用・サーバー限定） |
 | `API_SECRET` | iOS ショートカット / `/admin` 書き込み操作の認証用シークレット |
+
+## 開発・テスト手順
+
+### 1. セットアップ
+```bash
+cp .env.example .env.local
+# .env.local に Supabase キーと API_SECRET を設定
+npm install
+```
+
+### 2. ローカル起動・画面確認
+```bash
+npm run dev
+# ブラウザで http://localhost:3000（公開ダッシュボード） / http://localhost:3000/admin（管理画面）を確認
+```
+
+### 3. コマンドでの検証
+```bash
+npm test       # Vitest 単体テスト実行
+npm run lint   # ESLint チェック
+npm run build  # TypeScript 型チェック＋本番ビルド確認
+```
+
+### 4. iPhone 実機（NFC・ショートカット）でのテスト
+GitHub リポジトリを Vercel に連携すると、PR ごとに HTTPS の Preview URL が自動発行されます。iOS ショートカットの送信先 URL に Preview URL（または本番 URL）を指定することで、そのまま実機テストが可能です。
