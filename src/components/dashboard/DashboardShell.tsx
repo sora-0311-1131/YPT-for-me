@@ -1,0 +1,241 @@
+"use client";
+
+import { BarChart3, Clock, History, Lock, RefreshCw } from "lucide-react";
+import Link from "next/link";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { ThemeToggle } from "@/components/ThemeToggle";
+import type { CategoryBreakdownItem, PublicDashboardResponse } from "@/lib/dashboard-service";
+import { getSupabaseBrowserClient } from "@/lib/supabase/client";
+import { getLogicalDateJst } from "@/lib/time";
+import { CategoryBreakdown } from "./CategoryBreakdown";
+import { KpiSummary } from "./KpiSummary";
+import { TimerCard } from "./TimerCard";
+
+type TabKey = "overview" | "analytics" | "history";
+
+export function DashboardShell() {
+  const [activeTab, setActiveTab] = useState<TabKey>("overview");
+  const [data, setData] = useState<PublicDashboardResponse | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [nowMs, setNowMs] = useState<number>(() => Date.now());
+
+  const fetchDashboard = useCallback(async (signal?: AbortSignal) => {
+    try {
+      const res = await fetch("/api/dashboard", { cache: "no-store", signal });
+      if (!res.ok) {
+        throw new Error(`HTTP ${res.status}`);
+      }
+      const json = (await res.json()) as PublicDashboardResponse;
+      setData(json);
+      setError(null);
+    } catch (err) {
+      if ((err as Error).name === "AbortError") return;
+      setError("ダッシュボードデータの読み込みに失敗しました。");
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  // Initial load + visibility refresh
+  useEffect(() => {
+    const controller = new AbortController();
+    void fetchDashboard(controller.signal);
+
+    const onVisibilityChange = () => {
+      if (document.visibilityState === "visible") {
+        void fetchDashboard();
+      }
+    };
+    document.addEventListener("visibilitychange", onVisibilityChange);
+
+    return () => {
+      controller.abort();
+      document.removeEventListener("visibilitychange", onVisibilityChange);
+    };
+  }, [fetchDashboard]);
+
+  // Privacy-safe Realtime subscription on study_realtime_signals
+  useEffect(() => {
+    const supabase = getSupabaseBrowserClient();
+    if (!supabase) return;
+
+    const channel = supabase
+      .channel("public-study-signals")
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "study_realtime_signals" },
+        () => {
+          void fetchDashboard();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      void supabase.removeChannel(channel);
+    };
+  }, [fetchDashboard]);
+
+  // 1-second ticker when a session is active
+  const activeStartedAt = data?.active_session?.started_at ?? null;
+  useEffect(() => {
+    if (!activeStartedAt) return;
+    setNowMs(Date.now());
+    const id = window.setInterval(() => setNowMs(Date.now()), 1000);
+    return () => window.clearInterval(id);
+  }, [activeStartedAt]);
+
+  const activeElapsedSec = useMemo(() => {
+    if (!activeStartedAt) return 0;
+    const startMs = new Date(activeStartedAt).getTime();
+    if (Number.isNaN(startMs)) return 0;
+    return Math.max(0, Math.floor((nowMs - startMs) / 1000));
+  }, [activeStartedAt, nowMs]);
+
+  const activeBelongsToToday = useMemo(() => {
+    if (!data?.active_session) return false;
+    const startDate = new Date(data.active_session.started_at);
+    if (Number.isNaN(startDate.getTime())) return false;
+    return (
+      getLogicalDateJst(startDate, data.settings_public.day_boundary_hour) ===
+      data.today.logical_date
+    );
+  }, [data]);
+
+  const activeTodaySec = activeBelongsToToday ? activeElapsedSec : 0;
+
+  const liveTodayCategories = useMemo<CategoryBreakdownItem[]>(() => {
+    if (!data) return [];
+    const base = data.today.categories.map((item) => ({ ...item }));
+    if (data.active_session && activeTodaySec > 0) {
+      const existing = base.find((c) => c.category_id === data.active_session!.category_id);
+      if (existing) {
+        existing.total_sec += activeTodaySec;
+      } else {
+        base.push({
+          category_id: data.active_session.category_id,
+          name: data.active_session.category_name,
+          color: data.active_session.category_color,
+          total_sec: activeTodaySec,
+        });
+      }
+      base.sort((a, b) => b.total_sec - a.total_sec);
+    }
+    return base;
+  }, [data, activeTodaySec]);
+
+  const liveTodayTotalSec = (data?.today.completed_sec ?? 0) + activeTodaySec;
+  const liveWeekTotalSec = (data?.week.completed_sec ?? 0) + activeElapsedSec;
+
+  return (
+    <div className="min-h-screen bg-zinc-50 text-zinc-900 transition-colors dark:bg-zinc-950 dark:text-zinc-100">
+      <header className="sticky top-0 z-30 border-b border-zinc-200/80 bg-white/80 backdrop-blur-md dark:border-zinc-800/80 dark:bg-zinc-950/80">
+        <div className="mx-auto flex max-w-5xl items-center justify-between gap-4 px-4 py-3 sm:px-6">
+          <div className="flex items-center gap-2.5">
+            <span
+              className={`h-2.5 w-2.5 rounded-full ${
+                data?.active_session ? "animate-pulse bg-emerald-500" : "bg-zinc-400 dark:bg-zinc-600"
+              }`}
+            />
+            <span className="text-base font-bold tracking-tight">YPT for me</span>
+          </div>
+
+          <nav aria-label="ダッシュボードタブ" className="flex items-center gap-1 rounded-xl bg-zinc-100 p-1 dark:bg-zinc-900">
+            {(
+              [
+                { key: "overview", label: "Overview", icon: Clock },
+                { key: "analytics", label: "Analytics", icon: BarChart3 },
+                { key: "history", label: "History", icon: History },
+              ] as const
+            ).map(({ key, label, icon: Icon }) => (
+              <button
+                key={key}
+                type="button"
+                onClick={() => setActiveTab(key)}
+                className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium transition ${
+                  activeTab === key
+                    ? "bg-white text-zinc-900 shadow-sm dark:bg-zinc-800 dark:text-zinc-50"
+                    : "text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100"
+                }`}
+              >
+                <Icon className="h-3.5 w-3.5" />
+                {label}
+              </button>
+            ))}
+          </nav>
+
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => void fetchDashboard()}
+              aria-label="最新データを再読み込み"
+              className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-zinc-200 bg-white text-zinc-700 transition hover:bg-zinc-100 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-300 dark:hover:bg-zinc-800"
+            >
+              <RefreshCw className="h-4 w-4" />
+            </button>
+            <ThemeToggle />
+            <Link
+              href="/admin"
+              aria-label="管理画面"
+              className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-zinc-200 bg-white text-zinc-500 transition hover:bg-zinc-100 hover:text-zinc-900 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-400 dark:hover:bg-zinc-800 dark:hover:text-zinc-100"
+            >
+              <Lock className="h-4 w-4" />
+            </Link>
+          </div>
+        </div>
+      </header>
+
+      <main className="mx-auto max-w-5xl px-4 py-6 sm:px-6 sm:py-8">
+        {error && (
+          <div className="mb-6 rounded-xl border border-red-500/40 bg-red-500/10 px-4 py-3 text-sm text-red-700 dark:text-red-300">
+            {error}
+          </div>
+        )}
+
+        {loading && !data ? (
+          <div className="space-y-4">
+            <div className="h-56 animate-pulse rounded-2xl bg-zinc-200 dark:bg-zinc-900" />
+            <div className="grid gap-4 sm:grid-cols-3">
+              <div className="h-32 animate-pulse rounded-2xl bg-zinc-200 dark:bg-zinc-900" />
+              <div className="h-32 animate-pulse rounded-2xl bg-zinc-200 dark:bg-zinc-900" />
+              <div className="h-32 animate-pulse rounded-2xl bg-zinc-200 dark:bg-zinc-900" />
+            </div>
+          </div>
+        ) : data && activeTab === "overview" ? (
+          <div className="space-y-6">
+            <TimerCard
+              activeSession={data.active_session}
+              elapsedSec={activeElapsedSec}
+              longSessionWarnMin={data.settings_public.long_session_warn_min}
+            />
+
+            <KpiSummary
+              todayTotalSec={liveTodayTotalSec}
+              todayGoalMin={data.today.goal_min}
+              todayDayType={data.today.day_type}
+              streakDays={data.streak_days}
+              streakMinMinutes={data.settings_public.streak_min_minutes}
+              weekTotalSec={liveWeekTotalSec}
+            />
+
+            <CategoryBreakdown items={liveTodayCategories} />
+          </div>
+        ) : activeTab === "history" ? (
+          <section className="rounded-2xl border border-zinc-200 bg-white p-8 text-center dark:border-zinc-800 dark:bg-zinc-900/70">
+            <h2 className="text-base font-semibold">History タブ</h2>
+            <p className="mt-2 text-sm text-zinc-500 dark:text-zinc-400">
+              次の PR で日付・カテゴリ・場所フィルタ付きのセッション履歴一覧を追加予定です。
+            </p>
+          </section>
+        ) : (
+          <section className="rounded-2xl border border-zinc-200 bg-white p-8 text-center dark:border-zinc-800 dark:bg-zinc-900/70">
+            <h2 className="text-base font-semibold">Analytics タブ</h2>
+            <p className="mt-2 text-sm text-zinc-500 dark:text-zinc-400">
+              Phase 3 で GitHub 草カレンダー・曜日×時間帯ヒートマップ・大学時限別・スポット別・天気/気圧分析を追加予定です。
+            </p>
+          </section>
+        )}
+      </main>
+    </div>
+  );
+}
