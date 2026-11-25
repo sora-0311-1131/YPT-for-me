@@ -106,7 +106,7 @@ export async function getAppSettings(supabase: SupabaseClient): Promise<AppSetti
   return data as AppSettingsRow;
 }
 
-async function resolveCategory(
+export async function resolveCategory(
   supabase: SupabaseClient,
   input: { category_id?: string | null; category_name?: string | null }
 ): Promise<CategoryRow | null> {

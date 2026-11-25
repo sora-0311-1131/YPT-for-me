@@ -60,6 +60,18 @@ describe("syncStudyEvents", () => {
 
     const fakeSupabase = {
       from: (table: string) => {
+        if (table === "categories") {
+          return {
+            select: () => ({
+              eq: () => ({
+                maybeSingle: async () => ({
+                  data: { id: "cat-1", name: "英語", color: "#8B5CF6", sort_order: 4, is_archived: false },
+                  error: null,
+                }),
+              }),
+            }),
+          };
+        }
         if (table !== "study_sessions") {
           throw new Error(`Unexpected table ${table}`);
         }
@@ -71,7 +83,7 @@ describe("syncStudyEvents", () => {
             is: () => ({
               // Active conflicting session exists before the new start
               maybeSingle: async () => ({
-                data: { id: "prev-active", started_at: "2026-11-25T07:00:00.000Z" },
+                data: { id: "prev-active", started_at: "2026-11-25T07:00:00.000Z", needs_review: false },
                 error: null,
               }),
             }),
@@ -191,6 +203,56 @@ describe("syncStudyEvents", () => {
       session_id: "existing-sess",
     });
     expect(mockStartStudySession).not.toHaveBeenCalled();
+  });
+
+  it("does not close active session when start event references a nonexistent category", async () => {
+    const updateSpy = vi.fn();
+    const fakeSupabase = {
+      from: (table: string) => {
+        if (table === "categories") {
+          return {
+            select: () => ({
+              eq: () => ({
+                maybeSingle: async () => ({ data: null, error: null }),
+              }),
+            }),
+          };
+        }
+        return {
+          select: () => ({
+            eq: () => ({
+              maybeSingle: async () => ({ data: null, error: null }),
+            }),
+            is: () => ({
+              maybeSingle: async () => ({
+                data: { id: "active-keep", started_at: "2026-11-25T07:00:00.000Z", needs_review: false },
+                error: null,
+              }),
+            }),
+          }),
+          update: updateSpy,
+        };
+      },
+    } as unknown as SupabaseClient;
+
+    const parsed = parseSyncEvents([
+      {
+        client_event_id: "evt-bad-cat",
+        type: "start",
+        category_name: "削除済みカテゴリ",
+        occurred_at: "2026-11-25T09:00:00.000Z",
+      },
+    ]);
+    if (!parsed.ok) throw new Error(parsed.error);
+
+    const result = await syncStudyEvents(fakeSupabase, parsed.events);
+    expect(updateSpy).not.toHaveBeenCalled();
+    expect(mockStartStudySession).not.toHaveBeenCalled();
+    expect(result.processed_event_ids).toEqual([]);
+    expect(result.results[0]).toMatchObject({
+      client_event_id: "evt-bad-cat",
+      outcome: "error",
+    });
   });
 
   it("POST /api/study/sync enforces auth and validates payload", async () => {

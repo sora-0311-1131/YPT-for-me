@@ -3,6 +3,7 @@ import {
   parseCoordinates,
   parseOccurredAt,
   parseOptionalString,
+  resolveCategory,
   startStudySession,
   stopStudySession,
 } from "./study-service";
@@ -162,16 +163,31 @@ export async function syncStudyEvents(
         continue;
       }
 
+      // Validate that the target category actually exists BEFORE touching any active session
+      const category = await resolveCategory(supabase, {
+        category_id: event.category_id,
+        category_name: event.category_name,
+      });
+      if (!category) {
+        results.push({
+          client_event_id: event.client_event_id,
+          type: "start",
+          outcome: "error",
+          error: "Valid category_id or category_name is required.",
+        });
+        continue;
+      }
+
       // Check for an already-active session and auto-close with needs_review = true
-      let closedConflictSessionId: string | undefined;
+      let closedConflictSession: Pick<StudySessionRow, "id" | "needs_review"> | undefined;
       const { data: activeRow } = await supabase
         .from("study_sessions")
-        .select("id, started_at")
+        .select("id, started_at, needs_review")
         .is("ended_at", null)
         .maybeSingle();
 
       if (activeRow) {
-        const prev = activeRow as Pick<StudySessionRow, "id" | "started_at">;
+        const prev = activeRow as Pick<StudySessionRow, "id" | "started_at" | "needs_review">;
         const prevStartMs = new Date(prev.started_at).getTime();
         const closeMs = Math.max(prevStartMs, event.occurred_at.getTime());
         const durationSec = Math.round((closeMs - prevStartMs) / 1000);
@@ -195,7 +211,7 @@ export async function syncStudyEvents(
           });
           continue;
         }
-        closedConflictSessionId = prev.id;
+        closedConflictSession = { id: prev.id, needs_review: prev.needs_review };
       }
 
       const ageMs = now.getTime() - event.occurred_at.getTime();
@@ -203,8 +219,8 @@ export async function syncStudyEvents(
 
       const startResult = await startStudySession(supabase, {
         client_event_id: event.client_event_id,
-        category_id: event.category_id,
-        category_name: event.category_name,
+        category_id: category.id,
+        category_name: category.name,
         memo: event.memo,
         tag_id: event.tag_id,
         latitude: event.latitude,
@@ -214,6 +230,17 @@ export async function syncStudyEvents(
       });
 
       if (!startResult.ok) {
+        // Best-effort rollback of auto-closed session so active tracking is preserved on start failure
+        if (closedConflictSession) {
+          await supabase
+            .from("study_sessions")
+            .update({
+              ended_at: null,
+              duration_sec: null,
+              needs_review: closedConflictSession.needs_review,
+            })
+            .eq("id", closedConflictSession.id);
+        }
         results.push({
           client_event_id: event.client_event_id,
           type: "start",
@@ -229,11 +256,13 @@ export async function syncStudyEvents(
         type: "start",
         outcome: startResult.data.already_exists
           ? "already_exists"
-          : closedConflictSessionId
+          : closedConflictSession
             ? "applied_with_conflict_close"
             : "applied",
         session_id: startResult.data.session_id,
-        ...(closedConflictSessionId ? { closed_conflict_session_id: closedConflictSessionId } : {}),
+        ...(closedConflictSession
+          ? { closed_conflict_session_id: closedConflictSession.id }
+          : {}),
       });
     } else {
       const stopResult = await stopStudySession(supabase, {
