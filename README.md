@@ -51,7 +51,7 @@ npm install
 ### 2. ローカル起動・画面確認
 ```bash
 npm run dev
-# ブラウザで http://localhost:3000（公開ダッシュボード） / http://localhost:3000/admin（管理画面）を確認
+# ブラウザで http://localhost:3000 を確認（/admin は Phase 2 で追加予定）
 ```
 
 ### 3. コマンドでの検証
