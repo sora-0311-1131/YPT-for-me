@@ -218,7 +218,7 @@ export function SessionsTab({
               },
               {
                 key: "unregistered_spot",
-                label: `未登録 (${unregisteredSessions.length})`,
+                label: `未登録スポット (${unregisteredSessions.length})`,
               },
             ] as const
           ).map(({ key, label }) => (
@@ -226,7 +226,7 @@ export function SessionsTab({
               key={key}
               type="button"
               onClick={() => setFilter(key)}
-              className={`truncate rounded-lg px-2 py-2 text-xs font-medium transition sm:px-3 sm:py-1.5 ${
+              className={`truncate rounded-lg px-1.5 py-2 text-[11px] font-medium transition sm:px-3 sm:py-1.5 sm:text-xs ${
                 filter === key
                   ? "bg-white text-zinc-900 shadow-sm dark:bg-zinc-800 dark:text-zinc-50"
                   : "text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100"
@@ -253,7 +253,7 @@ export function SessionsTab({
           onSubmit={handleAddSession}
           className="space-y-4 rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm sm:p-5 dark:border-zinc-800 dark:bg-zinc-900/70"
         >
-          <h3 className="text-sm font-semibold">手動セッション追加（JST）</h3>
+          <h3 className="text-sm font-semibold">手動セッション追加 (JST)</h3>
           <div className="grid gap-3 sm:grid-cols-2">
             <label className="flex min-w-0 flex-col gap-1 text-xs text-zinc-500 dark:text-zinc-400">
               <span>カテゴリ</span>
@@ -370,7 +370,7 @@ export function SessionsTab({
                           onChange={(e) => setEditSpotId(e.target.value)}
                           className="h-11 w-full min-w-0 rounded-lg border border-zinc-200 bg-zinc-50 px-2.5 text-base sm:h-9 sm:text-sm dark:border-zinc-700 dark:bg-zinc-950"
                         >
-                          <option value="">Other（スポット未紐付）</option>
+                          <option value="">Other（未指定）</option>
                           {spots.map((sp) => (
                             <option key={sp.id} value={sp.id}>
                               {sp.name}
@@ -395,7 +395,7 @@ export function SessionsTab({
                         type="text"
                         value={editMemo}
                         onChange={(e) => setEditMemo(e.target.value)}
-                        placeholder="メモ（非公開）"
+                        placeholder="メモ（任意・非公開）"
                         className="h-11 w-full rounded-lg border border-zinc-200 bg-zinc-50 px-3 text-base sm:h-9 sm:text-sm dark:border-zinc-700 dark:bg-zinc-950"
                       />
 
@@ -417,7 +417,7 @@ export function SessionsTab({
                             className="inline-flex h-10 items-center gap-1 rounded-lg border border-zinc-200 px-3 text-xs sm:h-8 dark:border-zinc-700"
                           >
                             <X className="h-3.5 w-3.5" />
-                            取消
+                            キャンセル
                           </button>
                           <button
                             type="button"

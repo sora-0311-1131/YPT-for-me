@@ -124,7 +124,7 @@ export function TimerCard({ activeSession, elapsedSec, longSessionWarnMin }: Tim
             <div className="flex items-center gap-2">
               <AlertTriangle className="h-4 w-4 shrink-0" />
               <span>
-                計測時間が {Math.round(longSessionWarnMin / 60)} 時間を超えています。終了し忘れの場合は管理画面から補正できます。
+                計測時間が {Math.round(longSessionWarnMin / 60)}時間を超えています。終了し忘れの場合は管理画面から補正できます。
               </span>
             </div>
             <Link

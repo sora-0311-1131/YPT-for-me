@@ -181,7 +181,7 @@ export function SettingsTab({ settings, onRefresh, onUnauthorized }: SettingsTab
 
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           <label className="flex flex-col gap-1 text-xs text-zinc-500 dark:text-zinc-400">
-            <span>1日の日付境界（JST 0〜6時）</span>
+            <span>1日の日付境界 (JST 0〜6時)</span>
             <input
               type="number"
               min={0}
@@ -193,7 +193,7 @@ export function SettingsTab({ settings, onRefresh, onUnauthorized }: SettingsTab
           </label>
 
           <label className="flex flex-col gap-1 text-xs text-zinc-500 dark:text-zinc-400">
-            <span>Streak 達成最低時間（分）</span>
+            <span>Streak 達成最低時間 (分)</span>
             <input
               type="number"
               min={0}
@@ -205,7 +205,7 @@ export function SettingsTab({ settings, onRefresh, onUnauthorized }: SettingsTab
           </label>
 
           <label className="flex flex-col gap-1 text-xs text-zinc-500 dark:text-zinc-400">
-            <span>長時間警告しきい値（分）</span>
+            <span>長時間警告しきい値 (分)</span>
             <input
               type="number"
               min={1}
@@ -217,7 +217,7 @@ export function SettingsTab({ settings, onRefresh, onUnauthorized }: SettingsTab
           </label>
 
           <label className="flex flex-col gap-1 text-xs text-zinc-500 dark:text-zinc-400">
-            <span>平日の目標時間（分）</span>
+            <span>平日の目標時間 (分)</span>
             <input
               type="number"
               min={1}
@@ -229,7 +229,7 @@ export function SettingsTab({ settings, onRefresh, onUnauthorized }: SettingsTab
           </label>
 
           <label className="flex flex-col gap-1 text-xs text-zinc-500 dark:text-zinc-400">
-            <span>土日祝の目標時間（分）</span>
+            <span>土日祝の目標時間 (分)</span>
             <input
               type="number"
               min={1}
@@ -245,7 +245,7 @@ export function SettingsTab({ settings, onRefresh, onUnauthorized }: SettingsTab
       <section className="space-y-4 rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm sm:p-6 dark:border-zinc-800 dark:bg-zinc-900/70">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <div>
-            <h2 className="text-sm font-semibold">大学時限レンジ（JST）</h2>
+            <h2 className="text-sm font-semibold">大学時限レンジ (JST)</h2>
             <p className="mt-0.5 text-xs text-zinc-500 dark:text-zinc-400">
               日跨ぎ（例: 23:00 〜 04:00）も指定できます。
             </p>

@@ -154,11 +154,11 @@ export function AdminShell({ onLogout }: AdminShellProps) {
 
   const reviewCount = reviewSessions.length;
   const adminTabs = [
-    { key: "control", label: "Control", shortLabel: "操作", icon: Sliders, badge: reviewCount },
-    { key: "sessions", label: "Sessions", shortLabel: "履歴", icon: ListChecks, badge: 0 },
-    { key: "categories", label: "Categories", shortLabel: "分類", icon: Tags, badge: 0 },
-    { key: "spots", label: "Spots", shortLabel: "場所", icon: MapPin, badge: 0 },
-    { key: "settings", label: "Settings", shortLabel: "設定", icon: Settings, badge: 0 },
+    { key: "control", label: "Control", icon: Sliders, badge: reviewCount },
+    { key: "sessions", label: "Sessions", icon: ListChecks, badge: 0 },
+    { key: "categories", label: "Categories", icon: Tags, badge: 0 },
+    { key: "spots", label: "Spots", icon: MapPin, badge: 0 },
+    { key: "settings", label: "Settings", icon: Settings, badge: 0 },
   ] as const;
 
   return (
@@ -284,14 +284,14 @@ export function AdminShell({ onLogout }: AdminShellProps) {
         className="fixed inset-x-0 bottom-0 z-30 border-t border-zinc-200/80 bg-white/90 pb-[env(safe-area-inset-bottom)] backdrop-blur-md md:hidden dark:border-zinc-800/80 dark:bg-zinc-950/90"
       >
         <div className="grid grid-cols-5">
-          {adminTabs.map(({ key, shortLabel, icon: Icon, badge }) => {
+          {adminTabs.map(({ key, label, icon: Icon, badge }) => {
             const active = activeTab === key;
             return (
               <button
                 key={key}
                 type="button"
                 onClick={() => setActiveTab(key)}
-                className={`relative flex h-14 flex-col items-center justify-center gap-1 text-[10px] font-medium transition ${
+                className={`relative flex h-14 min-w-0 flex-col items-center justify-center gap-1 px-0.5 text-[10px] font-medium transition ${
                   active
                     ? "text-blue-600 dark:text-blue-400"
                     : "text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100"
@@ -309,7 +309,7 @@ export function AdminShell({ onLogout }: AdminShellProps) {
                     </span>
                   )}
                 </span>
-                <span>{shortLabel}</span>
+                <span className="max-w-full truncate">{label}</span>
               </button>
             );
           })}

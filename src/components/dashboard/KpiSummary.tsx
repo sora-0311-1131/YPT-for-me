@@ -77,7 +77,7 @@ export function KpiSummary({
         <p className="mt-2 text-[11px] leading-relaxed text-zinc-500 sm:mt-3 sm:text-xs dark:text-zinc-400">
           {todayTotalSec >= streakMinMinutes * 60
             ? "今日の基準を達成済み"
-            : `あと ${Math.max(1, Math.ceil((streakMinMinutes * 60 - todayTotalSec) / 60))} 分で達成`}
+            : `あと ${Math.max(1, Math.ceil((streakMinMinutes * 60 - todayTotalSec) / 60))}分で達成`}
         </p>
       </div>
 

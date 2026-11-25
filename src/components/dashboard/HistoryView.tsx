@@ -109,7 +109,7 @@ export function HistoryView({
           </label>
 
           <label className="flex min-w-0 flex-col gap-1 text-xs font-medium text-zinc-600 dark:text-zinc-400">
-            <span>場所</span>
+            <span>スポット</span>
             <select
               value={selectedLocation}
               onChange={(e) => setSelectedLocation(e.target.value)}
@@ -136,7 +136,7 @@ export function HistoryView({
 
           <div className="flex items-end justify-between gap-2">
             <div className="text-xs text-zinc-500 dark:text-zinc-400">
-              <div>{sessions.length} 件</div>
+              <div>{sessions.length}件</div>
               <div className="font-mono font-semibold text-zinc-800 dark:text-zinc-200">
                 計 {formatDurationHm(totalSec)}
               </div>
@@ -210,7 +210,7 @@ export function HistoryView({
                       <span className="inline-flex items-center gap-1 font-mono">
                         <Calendar className="h-3 w-3" />
                         {formatJstDateHm(session.started_at)}
-                        {" – "}
+                        {" 〜 "}
                         {session.ended_at ? formatJstTimeHm(session.ended_at) : "現在"}
                       </span>
                       <span className="inline-flex items-center gap-1">

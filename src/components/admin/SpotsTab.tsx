@@ -381,7 +381,7 @@ export function SpotsTab({
             未登録座標のセッション ({unregisteredSessions.length})
           </h3>
           <p className="mt-0.5 text-xs text-zinc-500 dark:text-zinc-400">
-            外出先などで一時記録された座標を 1 クリックで上の登録フォームへ転記できます。
+            外出先などで一時記録された座標を 1クリックで上の登録フォームへ転記できます。
           </p>
         </div>
 
@@ -494,7 +494,7 @@ export function SpotsTab({
                           className="inline-flex h-10 items-center gap-1 rounded-lg border border-zinc-200 px-3 text-xs sm:h-8 dark:border-zinc-700"
                         >
                           <X className="h-3.5 w-3.5" />
-                          取消
+                          キャンセル
                         </button>
                         <button
                           type="button"

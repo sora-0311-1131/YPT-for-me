@@ -132,10 +132,10 @@ export function AnalyticsView({ refreshTick }: AnalyticsViewProps) {
       <div className="flex flex-col items-stretch justify-between gap-3 rounded-2xl border border-zinc-200 bg-white px-4 py-4 shadow-sm sm:flex-row sm:items-center sm:px-5 dark:border-zinc-800 dark:bg-zinc-900/70">
         <div className="flex flex-wrap items-center justify-between gap-2 text-sm sm:justify-start sm:gap-3">
           <span className="font-semibold text-zinc-900 dark:text-zinc-100">
-            集計期間: 直近 {days} 日間
+            集計期間: 直近{days}日間
           </span>
           <span className="font-mono text-xs text-zinc-500 dark:text-zinc-400">
-            計 {formatDurationHm(data.total_sec)} / {data.total_sessions} セッション
+            計 {formatDurationHm(data.total_sec)} / {data.total_sessions}セッション
           </span>
         </div>
 
@@ -162,7 +162,7 @@ export function AnalyticsView({ refreshTick }: AnalyticsViewProps) {
         <div className="flex flex-wrap items-center justify-between gap-2">
           <div className="flex items-center gap-2 text-sm font-semibold">
             <Calendar className="h-4 w-4 text-emerald-500" />
-            年間学習カレンダー（直近 365 日）
+            年間学習カレンダー（直近365日）
           </div>
           <div className="flex items-center gap-1.5 text-[11px] text-zinc-500 dark:text-zinc-400">
             <span>少</span>
@@ -218,7 +218,7 @@ export function AnalyticsView({ refreshTick }: AnalyticsViewProps) {
       <section className="rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm sm:p-6 dark:border-zinc-800 dark:bg-zinc-900/70">
         <div className="flex items-center gap-2 text-sm font-semibold">
           <Clock className="h-4 w-4 text-blue-500" />
-          曜日 × 時間帯ヒートマップ（JST・実時間按分）
+          曜日 × 時間帯ヒートマップ (JST・実時間按分)
         </div>
 
         <div className="mt-4 overflow-x-auto pb-1">
@@ -276,7 +276,7 @@ export function AnalyticsView({ refreshTick }: AnalyticsViewProps) {
       {/* 3. University Period & 4. Spot Breakdown */}
       <div className="grid gap-4 sm:gap-6 lg:grid-cols-2">
         <section className="rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm sm:p-6 dark:border-zinc-800 dark:bg-zinc-900/70">
-          <h3 className="text-sm font-semibold">大学時限別（JST）</h3>
+          <h3 className="text-sm font-semibold">大学時限別 (JST)</h3>
           <div className="mt-4 space-y-3">
             {data.univ_periods.map((item) => {
               const pct = Math.round((item.total_sec / maxPeriodSec) * 100);

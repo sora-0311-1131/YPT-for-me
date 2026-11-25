@@ -204,7 +204,7 @@ export function ControlTab({
           {isLongActive && activeSession && (
             <div className="rounded-xl bg-white/80 p-4 text-xs text-zinc-800 dark:bg-zinc-950/70 dark:text-zinc-200">
               <p className="font-semibold">
-                現在計測中の「{activeSession.category_name}」が {Math.round(warnMin / 60)} 時間を超えています（経過 {formatDurationHms(elapsedSec)}）。
+                現在計測中の「{activeSession.category_name}」が {Math.round(warnMin / 60)}時間を超えています（経過 {formatDurationHms(elapsedSec)}）。
               </p>
               <p className="mt-1 text-zinc-500 dark:text-zinc-400">
                 下の「終了時刻を指定して補正」から正しい終了時刻を設定できます。
