@@ -255,6 +255,7 @@ export interface StartStudyInput {
   latitude?: number | null;
   longitude?: number | null;
   occurred_at?: Date;
+  skip_weather?: boolean;
 }
 
 export interface StartStudyResponse {
@@ -333,7 +334,9 @@ export async function startStudySession(
   const [settings, spotsResult, weather] = await Promise.all([
     getAppSettings(supabase),
     supabase.from("spots").select("*"),
-    fetchWeatherSnapshot(input.latitude ?? null, input.longitude ?? null),
+    input.skip_weather
+      ? Promise.resolve(null)
+      : fetchWeatherSnapshot(input.latitude ?? null, input.longitude ?? null),
   ]);
 
   const spots = (spotsResult.data ?? []) as SpotRow[];
