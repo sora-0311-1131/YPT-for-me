@@ -119,13 +119,14 @@ function buildCategoryBreakdown(
 
 export function buildDashboardSummary(params: {
   sessions: SanitizedSessionRow[];
+  historySessions?: SanitizedSessionRow[];
   activeRow: SanitizedSessionRow | null;
   categories: Array<Pick<CategoryRow, "id" | "name" | "color" | "sort_order" | "is_archived">>;
   settings: AppSettingsRow;
   now: Date;
   filters?: DashboardQueryOptions;
 }): PublicDashboardResponse {
-  const { sessions, activeRow, categories, settings, now, filters } = params;
+  const { sessions, historySessions, activeRow, categories, settings, now, filters } = params;
 
   const catMap = new Map<
     string,
@@ -187,7 +188,8 @@ export function buildDashboardSummary(params: {
       : settings.daily_goal_weekend_min;
 
   const limit = filters?.limit ?? 50;
-  const filteredHistory = sessions
+  const historySource = historySessions ?? sessions;
+  const filteredHistory = historySource
     .filter((row) => {
       if (filters?.category_id && row.category_id !== filters.category_id) {
         return false;
@@ -293,7 +295,13 @@ export async function getPublicDashboardData(
     settings.day_boundary_hour
   );
 
-  const [initialSessions, activeRes, categoriesRes] = await Promise.all([
+  const needsDedicatedDateFetch = Boolean(filters?.date && filters.date < windowStartDate);
+  const dateBounds =
+    needsDedicatedDateFetch && filters?.date
+      ? getLogicalDayBoundsUtc(filters.date, settings.day_boundary_hour)
+      : null;
+
+  const [initialSessions, activeRes, categoriesRes, dateSessions] = await Promise.all([
     fetchSanitizedSessionsInRange(supabase, initialSinceIso),
     supabase
       .from("study_sessions")
@@ -305,6 +313,9 @@ export async function getPublicDashboardData(
       .select("id, name, color, sort_order, is_archived")
       .order("sort_order", { ascending: true })
       .order("created_at", { ascending: true }),
+    dateBounds
+      ? fetchSanitizedSessionsInRange(supabase, dateBounds.startIso, dateBounds.endIso)
+      : Promise.resolve(undefined),
   ]);
 
   if (activeRes.error || categoriesRes.error) {
@@ -320,6 +331,7 @@ export async function getPublicDashboardData(
   // walk further back in chunks until the streak breaks or no older sessions exist.
   let summary = buildDashboardSummary({
     sessions: allSessions,
+    historySessions: dateSessions,
     activeRow: (activeRes.data as SanitizedSessionRow | null) ?? null,
     categories,
     settings,
@@ -356,6 +368,7 @@ export async function getPublicDashboardData(
 
     summary = buildDashboardSummary({
       sessions: allSessions,
+      historySessions: dateSessions,
       activeRow: (activeRes.data as SanitizedSessionRow | null) ?? null,
       categories,
       settings,

@@ -248,6 +248,15 @@ describe("buildDashboardSummary", () => {
     const result = await realGetPublicDashboardData(fakeSupabase, undefined, now, 3);
     expect(rangeFetchCalls).toBe(2);
     expect(result.streak_days).toBe(3);
+
+    // Querying an older date outside the 3-day window still returns that date's history
+    const oldDateResult = await realGetPublicDashboardData(
+      fakeSupabase,
+      { date: "2026-11-22" },
+      now,
+      3
+    );
+    expect(oldDateResult.recent_sessions.map((s) => s.id)).toEqual(["s-22"]);
   });
 });
 
