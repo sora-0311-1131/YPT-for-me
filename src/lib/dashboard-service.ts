@@ -64,7 +64,7 @@ export interface DashboardQueryOptions {
   limit?: number;
 }
 
-type SanitizedSessionRow = Pick<
+export type SanitizedSessionRow = Pick<
   StudySessionRow,
   | "id"
   | "category_id"
@@ -238,7 +238,7 @@ export function buildDashboardSummary(params: {
   };
 }
 
-async function fetchSanitizedSessionsInRange(
+export async function fetchSanitizedSessionsInRange(
   supabase: SupabaseClient,
   startIso: string,
   endIso?: string
