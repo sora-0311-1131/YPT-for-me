@@ -40,32 +40,57 @@ export function AdminShell({ onLogout }: AdminShellProps) {
   const loadAll = useCallback(async () => {
     const fetchOpts: RequestInit = { credentials: "same-origin", cache: "no-store" };
     try {
-      const [sessRes, reviewRes, catRes, spotRes, setRes] = await Promise.all([
+      const fetchAllNeedsReview = async (): Promise<
+        { unauthorized: true } | { unauthorized: false; sessions: AdminSessionDto[] }
+      > => {
+        const collected: AdminSessionDto[] = [];
+        let offset = 0;
+        const pageSize = 200;
+        while (true) {
+          const res = await fetch(
+            `/api/admin/sessions?needs_review=true&limit=${pageSize}&offset=${offset}`,
+            fetchOpts
+          );
+          if (res.status === 401) return { unauthorized: true };
+          if (!res.ok) throw new Error("Failed to load review sessions");
+          const json = (await res.json()) as {
+            sessions: AdminSessionDto[];
+            has_more?: boolean;
+          };
+          collected.push(...json.sessions);
+          if (!json.has_more || json.sessions.length === 0) break;
+          offset += json.sessions.length;
+        }
+        return { unauthorized: false, sessions: collected };
+      };
+
+      const [sessRes, reviewResult, catRes, spotRes, setRes] = await Promise.all([
         fetch(`/api/admin/sessions?limit=${SESSION_PAGE_SIZE}&offset=0`, fetchOpts),
-        fetch("/api/admin/sessions?needs_review=true&limit=200", fetchOpts),
+        fetchAllNeedsReview(),
         fetch("/api/admin/categories", fetchOpts),
         fetch("/api/admin/spots", fetchOpts),
         fetch("/api/admin/settings", fetchOpts),
       ]);
 
-      if ([sessRes, reviewRes, catRes, spotRes, setRes].some((r) => r.status === 401)) {
+      if (
+        reviewResult.unauthorized ||
+        [sessRes, catRes, spotRes, setRes].some((r) => r.status === 401)
+      ) {
         await onLogout();
         return;
       }
 
-      if (!sessRes.ok || !reviewRes.ok || !catRes.ok || !spotRes.ok || !setRes.ok) {
+      if (!sessRes.ok || !catRes.ok || !spotRes.ok || !setRes.ok) {
         throw new Error("Admin data load failed");
       }
 
-      const [sessJson, reviewJson, catJson, spotJson, setJson] = (await Promise.all([
+      const [sessJson, catJson, spotJson, setJson] = (await Promise.all([
         sessRes.json(),
-        reviewRes.json(),
         catRes.json(),
         spotRes.json(),
         setRes.json(),
       ])) as [
         { sessions: AdminSessionDto[]; has_more?: boolean },
-        { sessions: AdminSessionDto[] },
         { categories: CategoryRow[] },
         { spots: SpotRow[] },
         { settings: AppSettingsRow },
@@ -73,7 +98,7 @@ export function AdminShell({ onLogout }: AdminShellProps) {
 
       setSessions(sessJson.sessions);
       setHasMoreSessions(Boolean(sessJson.has_more));
-      setReviewSessions(reviewJson.sessions);
+      setReviewSessions(reviewResult.sessions);
       setCategories(catJson.categories);
       setSpots(spotJson.spots);
       setSettings(setJson.settings);

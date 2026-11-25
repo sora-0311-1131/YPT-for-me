@@ -217,7 +217,9 @@ export function SessionsTab({
               {
                 key: "unregistered_spot",
                 label: `未登録スポット (${
-                  sessions.filter((s) => s.spot_id === null && s.latitude !== null).length
+                  sessions.filter(
+                    (s) => s.spot_id === null && s.latitude !== null && s.longitude !== null
+                  ).length
                 })`,
               },
             ] as const
