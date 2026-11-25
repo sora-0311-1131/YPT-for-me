@@ -19,14 +19,18 @@ import { SessionsTab } from "./SessionsTab";
 
 type AdminTabKey = "control" | "sessions" | "categories" | "spots" | "settings";
 
+const SESSION_PAGE_SIZE = 50;
+
 interface AdminShellProps {
-  token: string;
-  onLogout: () => void;
+  onLogout: () => Promise<void> | void;
 }
 
-export function AdminShell({ token, onLogout }: AdminShellProps) {
+export function AdminShell({ onLogout }: AdminShellProps) {
   const [activeTab, setActiveTab] = useState<AdminTabKey>("control");
   const [sessions, setSessions] = useState<AdminSessionDto[]>([]);
+  const [hasMoreSessions, setHasMoreSessions] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [reviewSessions, setReviewSessions] = useState<AdminSessionDto[]>([]);
   const [categories, setCategories] = useState<CategoryRow[]>([]);
   const [spots, setSpots] = useState<SpotRow[]>([]);
   const [settings, setSettings] = useState<AppSettingsRow | null>(null);
@@ -34,30 +38,33 @@ export function AdminShell({ token, onLogout }: AdminShellProps) {
   const [error, setError] = useState<string | null>(null);
 
   const loadAll = useCallback(async () => {
-    const headers = { Authorization: `Bearer ${token}` };
+    const fetchOpts: RequestInit = { credentials: "same-origin", cache: "no-store" };
     try {
-      const [sessRes, catRes, spotRes, setRes] = await Promise.all([
-        fetch("/api/admin/sessions?limit=100", { headers, cache: "no-store" }),
-        fetch("/api/admin/categories", { headers, cache: "no-store" }),
-        fetch("/api/admin/spots", { headers, cache: "no-store" }),
-        fetch("/api/admin/settings", { headers, cache: "no-store" }),
+      const [sessRes, reviewRes, catRes, spotRes, setRes] = await Promise.all([
+        fetch(`/api/admin/sessions?limit=${SESSION_PAGE_SIZE}&offset=0`, fetchOpts),
+        fetch("/api/admin/sessions?needs_review=true&limit=200", fetchOpts),
+        fetch("/api/admin/categories", fetchOpts),
+        fetch("/api/admin/spots", fetchOpts),
+        fetch("/api/admin/settings", fetchOpts),
       ]);
 
-      if ([sessRes, catRes, spotRes, setRes].some((r) => r.status === 401)) {
-        onLogout();
+      if ([sessRes, reviewRes, catRes, spotRes, setRes].some((r) => r.status === 401)) {
+        await onLogout();
         return;
       }
 
-      if (!sessRes.ok || !catRes.ok || !spotRes.ok || !setRes.ok) {
+      if (!sessRes.ok || !reviewRes.ok || !catRes.ok || !spotRes.ok || !setRes.ok) {
         throw new Error("Admin data load failed");
       }
 
-      const [sessJson, catJson, spotJson, setJson] = (await Promise.all([
+      const [sessJson, reviewJson, catJson, spotJson, setJson] = (await Promise.all([
         sessRes.json(),
+        reviewRes.json(),
         catRes.json(),
         spotRes.json(),
         setRes.json(),
       ])) as [
+        { sessions: AdminSessionDto[]; has_more?: boolean },
         { sessions: AdminSessionDto[] },
         { categories: CategoryRow[] },
         { spots: SpotRow[] },
@@ -65,6 +72,8 @@ export function AdminShell({ token, onLogout }: AdminShellProps) {
       ];
 
       setSessions(sessJson.sessions);
+      setHasMoreSessions(Boolean(sessJson.has_more));
+      setReviewSessions(reviewJson.sessions);
       setCategories(catJson.categories);
       setSpots(spotJson.spots);
       setSettings(setJson.settings);
@@ -74,13 +83,42 @@ export function AdminShell({ token, onLogout }: AdminShellProps) {
     } finally {
       setLoading(false);
     }
-  }, [token, onLogout]);
+  }, [onLogout]);
+
+  const loadMoreSessions = useCallback(async () => {
+    setLoadingMore(true);
+    try {
+      const res = await fetch(
+        `/api/admin/sessions?limit=${SESSION_PAGE_SIZE}&offset=${sessions.length}`,
+        { credentials: "same-origin", cache: "no-store" }
+      );
+      if (res.status === 401) {
+        await onLogout();
+        return;
+      }
+      if (!res.ok) {
+        setError("追加のセッション履歴の読み込みに失敗しました。");
+        return;
+      }
+      const json = (await res.json()) as { sessions: AdminSessionDto[]; has_more?: boolean };
+      setSessions((prev) => {
+        const seen = new Set(prev.map((s) => s.id));
+        const next = json.sessions.filter((s) => !seen.has(s.id));
+        return [...prev, ...next];
+      });
+      setHasMoreSessions(Boolean(json.has_more));
+    } catch {
+      setError("通信エラーにより追加履歴を読み込めませんでした。");
+    } finally {
+      setLoadingMore(false);
+    }
+  }, [sessions.length, onLogout]);
 
   useEffect(() => {
     void loadAll();
   }, [loadAll]);
 
-  const reviewCount = sessions.filter((s) => s.needs_review).length;
+  const reviewCount = reviewSessions.length;
 
   return (
     <div className="min-h-screen bg-zinc-50 text-zinc-900 dark:bg-zinc-950 dark:text-zinc-100">
@@ -140,7 +178,7 @@ export function AdminShell({ token, onLogout }: AdminShellProps) {
             <ThemeToggle />
             <button
               type="button"
-              onClick={onLogout}
+              onClick={() => void onLogout()}
               aria-label="ログアウト"
               className="inline-flex h-9 items-center gap-1 rounded-lg border border-zinc-200 bg-white px-2.5 text-xs font-medium text-zinc-600 transition hover:bg-zinc-100 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-300 dark:hover:bg-zinc-800"
             >
@@ -165,8 +203,8 @@ export function AdminShell({ token, onLogout }: AdminShellProps) {
           </div>
         ) : activeTab === "control" ? (
           <ControlTab
-            token={token}
             sessions={sessions}
+            reviewSessions={reviewSessions}
             categories={categories}
             settings={settings}
             onRefresh={loadAll}
@@ -174,10 +212,13 @@ export function AdminShell({ token, onLogout }: AdminShellProps) {
           />
         ) : activeTab === "sessions" ? (
           <SessionsTab
-            token={token}
             sessions={sessions}
+            reviewSessions={reviewSessions}
+            hasMore={hasMoreSessions}
+            loadingMore={loadingMore}
             categories={categories}
             spots={spots}
+            onLoadMore={loadMoreSessions}
             onRefresh={loadAll}
             onUnauthorized={onLogout}
           />

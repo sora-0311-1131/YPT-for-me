@@ -20,13 +20,15 @@ export async function GET(request: Request): Promise<NextResponse> {
   const unregisteredSpotOnly = url.searchParams.get("unregistered_spot") === "true";
   const rawLimit = Number(url.searchParams.get("limit") ?? 50);
   const limit = Number.isFinite(rawLimit) ? Math.min(Math.max(Math.trunc(rawLimit), 1), 200) : 50;
+  const rawOffset = Number(url.searchParams.get("offset") ?? 0);
+  const offset = Number.isFinite(rawOffset) ? Math.max(Math.trunc(rawOffset), 0) : 0;
 
   const supabase = getSupabaseAdmin();
   let query = supabase
     .from("study_sessions")
     .select("*")
     .order("started_at", { ascending: false })
-    .limit(limit);
+    .range(offset, offset + limit);
 
   if (needsReviewOnly) {
     query = query.eq("needs_review", true);
@@ -47,11 +49,15 @@ export async function GET(request: Request): Promise<NextResponse> {
     catMap.set(cat.id, { name: cat.name, color: cat.color });
   }
 
-  const items = ((sessions ?? []) as StudySessionRow[]).map((row) =>
+  const rawRows = (sessions ?? []) as StudySessionRow[];
+  const hasMore = rawRows.length > limit;
+  const pageRows = hasMore ? rawRows.slice(0, limit) : rawRows;
+
+  const items = pageRows.map((row) =>
     toAdminSessionDto(row, catMap.get(row.category_id) ?? { name: "Unknown", color: "#6B7280" })
   );
 
-  return NextResponse.json({ sessions: items }, { status: 200 });
+  return NextResponse.json({ sessions: items, has_more: hasMore }, { status: 200 });
 }
 
 export async function POST(request: Request): Promise<NextResponse> {

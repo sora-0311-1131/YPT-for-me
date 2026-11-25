@@ -6,59 +6,37 @@ import { useCallback, useEffect, useState } from "react";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { AdminShell } from "./AdminShell";
 
-const ADMIN_TOKEN_KEY = "ypt-for-me-admin-token";
-
 export function AdminGate() {
-  const [token, setToken] = useState<string | null>(null);
+  const [authenticated, setAuthenticated] = useState(false);
   const [checking, setChecking] = useState(true);
   const [input, setInput] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const verifyToken = useCallback(async (candidate: string): Promise<boolean> => {
-    try {
-      const res = await fetch("/api/admin/verify", {
-        method: "POST",
-        headers: { Authorization: `Bearer ${candidate}` },
-        cache: "no-store",
-      });
-      return res.ok;
-    } catch {
-      return false;
-    }
-  }, []);
-
   useEffect(() => {
     let active = true;
-    const init = async () => {
-      let saved: string | null = null;
+    const checkSession = async () => {
       try {
-        saved = window.localStorage.getItem(ADMIN_TOKEN_KEY);
-      } catch {
-        saved = null;
-      }
-
-      if (saved) {
-        const ok = await verifyToken(saved);
-        if (!active) return;
-        if (ok) {
-          setToken(saved);
-        } else {
-          try {
-            window.localStorage.removeItem(ADMIN_TOKEN_KEY);
-          } catch {
-            // ignore
-          }
+        const res = await fetch("/api/admin/verify", {
+          method: "GET",
+          credentials: "same-origin",
+          cache: "no-store",
+        });
+        if (active && res.ok) {
+          setAuthenticated(true);
         }
+      } catch {
+        // treat network error as unauthenticated
+      } finally {
+        if (active) setChecking(false);
       }
-      if (active) setChecking(false);
     };
 
-    void init();
+    void checkSession();
     return () => {
       active = false;
     };
-  }, [verifyToken]);
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -67,30 +45,38 @@ export function AdminGate() {
 
     setSubmitting(true);
     setError(null);
-    const ok = await verifyToken(candidate);
-    setSubmitting(false);
-
-    if (!ok) {
-      setError("パスコードが正しくありません。");
-      return;
-    }
-
     try {
-      window.localStorage.setItem(ADMIN_TOKEN_KEY, candidate);
+      const res = await fetch("/api/admin/verify", {
+        method: "POST",
+        credentials: "same-origin",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ passcode: candidate }),
+        cache: "no-store",
+      });
+      if (!res.ok) {
+        setError("パスコードが正しくありません。");
+        return;
+      }
+      setAuthenticated(true);
+      setInput("");
     } catch {
-      // ignore storage failure
+      setError("通信エラーが発生しました。");
+    } finally {
+      setSubmitting(false);
     }
-    setToken(candidate);
-    setInput("");
   };
 
-  const handleLogout = useCallback(() => {
+  const handleLogout = useCallback(async () => {
     try {
-      window.localStorage.removeItem(ADMIN_TOKEN_KEY);
+      await fetch("/api/admin/verify", {
+        method: "DELETE",
+        credentials: "same-origin",
+        cache: "no-store",
+      });
     } catch {
-      // ignore
+      // clear UI state even on transient network error
     }
-    setToken(null);
+    setAuthenticated(false);
     setError(null);
   }, []);
 
@@ -102,8 +88,8 @@ export function AdminGate() {
     );
   }
 
-  if (token) {
-    return <AdminShell token={token} onLogout={handleLogout} />;
+  if (authenticated) {
+    return <AdminShell onLogout={handleLogout} />;
   }
 
   return (
@@ -129,7 +115,7 @@ export function AdminGate() {
               YPT for me Admin
             </h1>
             <p className="text-xs text-zinc-500 dark:text-zinc-400">
-              管理操作にはパスコード（API_SECRET）が必要です
+              HttpOnly セッション Cookie で保護されています
             </p>
           </div>
         </div>

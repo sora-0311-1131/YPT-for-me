@@ -7,21 +7,27 @@ import { formatDurationHm, formatJstDateHm } from "@/lib/format";
 import type { AdminSessionDto, CategoryRow, SpotRow } from "@/lib/types";
 
 interface SessionsTabProps {
-  token: string;
   sessions: AdminSessionDto[];
+  reviewSessions: AdminSessionDto[];
+  hasMore: boolean;
+  loadingMore: boolean;
   categories: CategoryRow[];
   spots: SpotRow[];
+  onLoadMore: () => Promise<void>;
   onRefresh: () => Promise<void>;
-  onUnauthorized: () => void;
+  onUnauthorized: () => Promise<void> | void;
 }
 
 type SessionFilter = "all" | "needs_review" | "unregistered_spot";
 
 export function SessionsTab({
-  token,
   sessions,
+  reviewSessions,
+  hasMore,
+  loadingMore,
   categories,
   spots,
+  onLoadMore,
   onRefresh,
   onUnauthorized,
 }: SessionsTabProps) {
@@ -46,18 +52,14 @@ export function SessionsTab({
   const [busy, setBusy] = useState(false);
   const [feedback, setFeedback] = useState<{ type: "ok" | "error"; text: string } | null>(null);
 
-  const authHeaders = {
-    Authorization: `Bearer ${token}`,
-    "Content-Type": "application/json",
-  };
+  const jsonHeaders = { "Content-Type": "application/json" };
 
-  const filtered = sessions.filter((s) => {
-    if (filter === "needs_review") return s.needs_review;
-    if (filter === "unregistered_spot") {
-      return s.spot_id === null && s.latitude !== null && s.longitude !== null;
-    }
-    return true;
-  });
+  const filtered =
+    filter === "needs_review"
+      ? reviewSessions
+      : filter === "unregistered_spot"
+        ? sessions.filter((s) => s.spot_id === null && s.latitude !== null && s.longitude !== null)
+        : sessions;
 
   const handleAddSession = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -73,7 +75,8 @@ export function SessionsTab({
     try {
       const res = await fetch("/api/admin/sessions", {
         method: "POST",
-        headers: authHeaders,
+        credentials: "same-origin",
+        headers: jsonHeaders,
         body: JSON.stringify({
           category_id: addCategoryId || activeCategories[0]?.id,
           spot_id: addSpotId || null,
@@ -82,7 +85,10 @@ export function SessionsTab({
           memo: addMemo.trim() || null,
         }),
       });
-      if (res.status === 401) return onUnauthorized();
+      if (res.status === 401) {
+        await onUnauthorized();
+        return;
+      }
       const json = (await res.json()) as { error?: string };
       if (!res.ok) {
         setFeedback({ type: "error", text: json.error ?? "手動セッションの追加に失敗しました。" });
@@ -94,6 +100,8 @@ export function SessionsTab({
       setAddMemo("");
       setFeedback({ type: "ok", text: "手動セッションを追加しました。" });
       await onRefresh();
+    } catch {
+      setFeedback({ type: "error", text: "通信エラーが発生しました。" });
     } finally {
       setBusy(false);
     }
@@ -126,7 +134,8 @@ export function SessionsTab({
     try {
       const res = await fetch(`/api/admin/sessions/${id}`, {
         method: "PATCH",
-        headers: authHeaders,
+        credentials: "same-origin",
+        headers: jsonHeaders,
         body: JSON.stringify({
           category_id: editCategoryId,
           spot_id: editSpotId || null,
@@ -136,7 +145,10 @@ export function SessionsTab({
           needs_review: editNeedsReview,
         }),
       });
-      if (res.status === 401) return onUnauthorized();
+      if (res.status === 401) {
+        await onUnauthorized();
+        return;
+      }
       const json = (await res.json()) as { error?: string };
       if (!res.ok) {
         setFeedback({ type: "error", text: json.error ?? "更新に失敗しました。" });
@@ -145,6 +157,8 @@ export function SessionsTab({
       setEditingId(null);
       setFeedback({ type: "ok", text: "セッションを更新しました。" });
       await onRefresh();
+    } catch {
+      setFeedback({ type: "error", text: "通信エラーが発生しました。" });
     } finally {
       setBusy(false);
     }
@@ -157,15 +171,20 @@ export function SessionsTab({
     try {
       const res = await fetch(`/api/admin/sessions/${id}`, {
         method: "DELETE",
-        headers: { Authorization: `Bearer ${token}` },
+        credentials: "same-origin",
       });
-      if (res.status === 401) return onUnauthorized();
+      if (res.status === 401) {
+        await onUnauthorized();
+        return;
+      }
       if (!res.ok) {
         setFeedback({ type: "error", text: "削除に失敗しました。" });
         return;
       }
       setFeedback({ type: "ok", text: "セッションを削除しました。" });
       await onRefresh();
+    } catch {
+      setFeedback({ type: "error", text: "通信エラーが発生しました。" });
     } finally {
       setBusy(false);
     }
@@ -190,10 +209,10 @@ export function SessionsTab({
         <div className="flex items-center gap-1 rounded-xl bg-zinc-200/70 p-1 dark:bg-zinc-900">
           {(
             [
-              { key: "all", label: `すべて (${sessions.length})` },
+              { key: "all", label: `すべて (${sessions.length}${hasMore ? "+" : ""})` },
               {
                 key: "needs_review",
-                label: `要確認 (${sessions.filter((s) => s.needs_review).length})`,
+                label: `要確認 (${reviewSessions.length})`,
               },
               {
                 key: "unregistered_spot",
@@ -473,6 +492,19 @@ export function SessionsTab({
           </ul>
         )}
       </section>
+
+      {filter !== "needs_review" && hasMore && (
+        <div className="flex justify-center">
+          <button
+            type="button"
+            disabled={loadingMore}
+            onClick={() => void onLoadMore()}
+            className="rounded-lg border border-zinc-200 bg-white px-4 py-2 text-xs font-medium text-zinc-700 transition hover:bg-zinc-100 disabled:opacity-50 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-300 dark:hover:bg-zinc-800"
+          >
+            {loadingMore ? "読み込み中..." : "過去のセッションをさらに読み込む"}
+          </button>
+        </div>
+      )}
     </div>
   );
 }

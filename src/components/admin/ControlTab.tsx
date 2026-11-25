@@ -7,24 +7,23 @@ import { formatDurationHm, formatDurationHms, formatJstDateHm } from "@/lib/form
 import type { AdminSessionDto, AppSettingsRow, CategoryRow } from "@/lib/types";
 
 interface ControlTabProps {
-  token: string;
   sessions: AdminSessionDto[];
+  reviewSessions: AdminSessionDto[];
   categories: CategoryRow[];
   settings: AppSettingsRow | null;
   onRefresh: () => Promise<void>;
-  onUnauthorized: () => void;
+  onUnauthorized: () => Promise<void> | void;
 }
 
 export function ControlTab({
-  token,
   sessions,
+  reviewSessions,
   categories,
   settings,
   onRefresh,
   onUnauthorized,
 }: ControlTabProps) {
   const activeSession = sessions.find((s) => s.ended_at === null) ?? null;
-  const reviewSessions = sessions.filter((s) => s.needs_review);
   const activeCategories = categories.filter((c) => !c.is_archived);
 
   const [selectedCategoryId, setSelectedCategoryId] = useState(activeCategories[0]?.id ?? "");
@@ -53,10 +52,7 @@ export function ControlTab({
   const warnMin = settings?.long_session_warn_min ?? 360;
   const isLongActive = activeSession !== null && elapsedSec >= warnMin * 60;
 
-  const authHeaders = {
-    Authorization: `Bearer ${token}`,
-    "Content-Type": "application/json",
-  };
+  const jsonHeaders = { "Content-Type": "application/json" };
 
   const handleManualStart = async () => {
     if (!selectedCategoryId) return;
@@ -65,14 +61,18 @@ export function ControlTab({
     try {
       const res = await fetch("/api/study/start", {
         method: "POST",
-        headers: authHeaders,
+        credentials: "same-origin",
+        headers: jsonHeaders,
         body: JSON.stringify({
           category_id: selectedCategoryId,
           memo: memo.trim() || undefined,
           tag_id: "web_manual",
         }),
       });
-      if (res.status === 401) return onUnauthorized();
+      if (res.status === 401) {
+        await onUnauthorized();
+        return;
+      }
       const json = (await res.json()) as { error?: string; category_name?: string };
       if (!res.ok) {
         setFeedback({ type: "error", text: json.error ?? "開始に失敗しました。" });
@@ -94,10 +94,14 @@ export function ControlTab({
     try {
       const res = await fetch("/api/study/stop", {
         method: "POST",
-        headers: authHeaders,
+        credentials: "same-origin",
+        headers: jsonHeaders,
         body: JSON.stringify({}),
       });
-      if (res.status === 401) return onUnauthorized();
+      if (res.status === 401) {
+        await onUnauthorized();
+        return;
+      }
       const json = (await res.json()) as { error?: string; duration_min?: number };
       if (!res.ok) {
         setFeedback({ type: "error", text: json.error ?? "終了に失敗しました。" });
@@ -125,10 +129,14 @@ export function ControlTab({
     try {
       const res = await fetch(`/api/admin/sessions/${activeSession.id}`, {
         method: "PATCH",
-        headers: authHeaders,
+        credentials: "same-origin",
+        headers: jsonHeaders,
         body: JSON.stringify({ ended_at: endedIso, needs_review: false }),
       });
-      if (res.status === 401) return onUnauthorized();
+      if (res.status === 401) {
+        await onUnauthorized();
+        return;
+      }
       const json = (await res.json()) as { error?: string };
       if (!res.ok) {
         setFeedback({ type: "error", text: json.error ?? "終了時刻の補正に失敗しました。" });
@@ -150,16 +158,22 @@ export function ControlTab({
     try {
       const res = await fetch(`/api/admin/sessions/${sessionId}`, {
         method: "PATCH",
-        headers: authHeaders,
+        credentials: "same-origin",
+        headers: jsonHeaders,
         body: JSON.stringify({ needs_review: false }),
       });
-      if (res.status === 401) return onUnauthorized();
+      if (res.status === 401) {
+        await onUnauthorized();
+        return;
+      }
       if (!res.ok) {
         setFeedback({ type: "error", text: "要確認フラグの解除に失敗しました。" });
         return;
       }
       setFeedback({ type: "ok", text: "確認済みにしました。" });
       await onRefresh();
+    } catch {
+      setFeedback({ type: "error", text: "通信エラーが発生しました。" });
     } finally {
       setBusy(false);
     }
