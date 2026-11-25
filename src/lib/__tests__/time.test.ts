@@ -33,11 +33,15 @@ describe("time utilities", () => {
     expect(bounds.endIso).toBe("2026-11-25T19:00:00.000Z");
   });
 
-  it("detects Japanese national holidays including substitute and citizens holidays", () => {
+  it("detects Japanese national holidays including substitute, citizens, and 2020/2021 Olympic holidays", () => {
     expect(isJapaneseHoliday("2026-01-01")).toBe(true); // New Year's Day
     expect(isJapaneseHoliday("2026-11-23")).toBe(true); // Labor Thanksgiving Day
     expect(isJapaneseHoliday("2026-05-06")).toBe(true); // Substitute for May 3 (Sunday in 2026)
     expect(isJapaneseHoliday("2026-09-22")).toBe(true); // Citizens' Holiday between 9/21 and 9/23
+    expect(isJapaneseHoliday("2020-07-23")).toBe(true); // 2020 Marine Day (Olympic override)
+    expect(isJapaneseHoliday("2020-07-24")).toBe(true); // 2020 Sports Day (Olympic override)
+    expect(isJapaneseHoliday("2020-10-12")).toBe(false); // Not Sports Day in 2020
+    expect(isJapaneseHoliday("2021-08-09")).toBe(true); // 2021 Substitute for Mountain Day (Aug 8 Sun)
     expect(isJapaneseHoliday("2026-11-25")).toBe(false);
   });
 

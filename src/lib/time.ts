@@ -76,9 +76,29 @@ function autumnalEquinoxDay(year: number): number {
 
 /**
  * Computes Japanese national holidays for a given year (2020+),
- * including Happy Mondays, equinoxes, substitute holidays, and Citizens' Holidays.
+ * including Happy Mondays, equinoxes, 2020/2021 Olympic overrides,
+ * substitute holidays, and Citizens' Holidays.
  */
 export function getJapaneseHolidaysForYear(year: number): Set<string> {
+  const marineDay =
+    year === 2020
+      ? formatYmd(2020, 7, 23)
+      : year === 2021
+        ? formatYmd(2021, 7, 22)
+        : formatYmd(year, 7, nthWeekdayOfMonth(year, 7, 1, 3));
+  const mountainDay =
+    year === 2020
+      ? formatYmd(2020, 8, 10)
+      : year === 2021
+        ? formatYmd(2021, 8, 8)
+        : formatYmd(year, 8, 11);
+  const sportsDay =
+    year === 2020
+      ? formatYmd(2020, 7, 24)
+      : year === 2021
+        ? formatYmd(2021, 7, 23)
+        : formatYmd(year, 10, nthWeekdayOfMonth(year, 10, 1, 2));
+
   const base = new Set<string>([
     formatYmd(year, 1, 1), // New Year's Day
     formatYmd(year, 1, nthWeekdayOfMonth(year, 1, 1, 2)), // Coming of Age Day
@@ -89,11 +109,11 @@ export function getJapaneseHolidaysForYear(year: number): Set<string> {
     formatYmd(year, 5, 3), // Constitution Memorial Day
     formatYmd(year, 5, 4), // Greenery Day
     formatYmd(year, 5, 5), // Children's Day
-    formatYmd(year, 7, nthWeekdayOfMonth(year, 7, 1, 3)), // Marine Day
-    formatYmd(year, 8, 11), // Mountain Day
+    marineDay, // Marine Day
+    mountainDay, // Mountain Day
     formatYmd(year, 9, nthWeekdayOfMonth(year, 9, 1, 3)), // Respect for the Aged Day
     formatYmd(year, 9, autumnalEquinoxDay(year)), // Autumnal Equinox Day
-    formatYmd(year, 10, nthWeekdayOfMonth(year, 10, 1, 2)), // Sports Day
+    sportsDay, // Sports Day
     formatYmd(year, 11, 3), // Culture Day
     formatYmd(year, 11, 23), // Labor Thanksgiving Day
   ]);
