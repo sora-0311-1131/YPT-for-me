@@ -1,0 +1,568 @@
+"use client";
+
+import { MapPin, Pencil, Plus, RefreshCw, Save, Trash2, X } from "lucide-react";
+import { useState } from "react";
+import { formatJstDateHm } from "@/lib/format";
+import type { AdminSessionDto, SpotGroup, SpotRow } from "@/lib/types";
+
+interface SpotsTabProps {
+  spots: SpotRow[];
+  unregisteredSessions: AdminSessionDto[];
+  onRefresh: () => Promise<void>;
+  onUnauthorized: () => Promise<void> | void;
+}
+
+const SPOT_GROUPS: SpotGroup[] = ["Home", "Univ", "Cafe", "Other"];
+
+export function SpotsTab({
+  spots,
+  unregisteredSessions,
+  onRefresh,
+  onUnauthorized,
+}: SpotsTabProps) {
+  const [name, setName] = useState("");
+  const [spotGroup, setSpotGroup] = useState<SpotGroup>("Univ");
+  const [latitude, setLatitude] = useState("");
+  const [longitude, setLongitude] = useState("");
+  const [radiusM, setRadiusM] = useState("50");
+  const [autoReapplyOnCreate, setAutoReapplyOnCreate] = useState(true);
+
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editName, setEditName] = useState("");
+  const [editGroup, setEditGroup] = useState<SpotGroup>("Other");
+  const [editLat, setEditLat] = useState("");
+  const [editLng, setEditLng] = useState("");
+  const [editRadius, setEditRadius] = useState("50");
+
+  const [busy, setBusy] = useState(false);
+  const [visibleUnregisteredCount, setVisibleUnregisteredCount] = useState(20);
+  const [feedback, setFeedback] = useState<{ type: "ok" | "error"; text: string } | null>(null);
+
+  const jsonHeaders = { "Content-Type": "application/json" };
+
+  const parseSpotFields = (latStr: string, lngStr: string, radStr: string) => {
+    const lat = Number(latStr.trim());
+    const lng = Number(lngStr.trim());
+    const radius = Number(radStr.trim());
+    if (!latStr.trim() || !lngStr.trim() || !Number.isFinite(lat) || !Number.isFinite(lng)) {
+      return { ok: false as const, error: "緯度・経度を数値で入力してください。" };
+    }
+    if (lat < -90 || lat > 90 || lng < -180 || lng > 180) {
+      return { ok: false as const, error: "緯度は -90〜90、経度は -180〜180 の範囲で入力してください。" };
+    }
+    if (!Number.isInteger(radius) || radius < 1 || radius > 50_000) {
+      return { ok: false as const, error: "判定半径は 1〜50000 の整数 (m) で入力してください。" };
+    }
+    return { ok: true as const, lat, lng, radius };
+  };
+
+  const handleReapply = async (spotId: string, includeAll: boolean): Promise<string | null> => {
+    const res = await fetch(`/api/admin/spots/${spotId}/reapply`, {
+      method: "POST",
+      credentials: "same-origin",
+      headers: jsonHeaders,
+      body: JSON.stringify({ include_all: includeAll }),
+    });
+    if (res.status === 401) {
+      await onUnauthorized();
+      return null;
+    }
+    const json = (await res.json()) as {
+      error?: string;
+      evaluated_count?: number;
+      updated_count?: number;
+      failed_count?: number;
+    };
+    if (!res.ok) {
+      const detail =
+        json.failed_count !== undefined
+          ? `（評価 ${json.evaluated_count ?? 0} 件 / 更新 ${json.updated_count ?? 0} 件 / 失敗 ${json.failed_count} 件）`
+          : "";
+      throw new Error(`${json.error ?? "再適用に失敗しました。"}${detail}`);
+    }
+    return `評価 ${json.evaluated_count ?? 0} 件中 ${json.updated_count ?? 0} 件を更新しました。`;
+  };
+
+  const handleCreate = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const trimmedName = name.trim();
+    if (!trimmedName) {
+      setFeedback({ type: "error", text: "スポット名を入力してください。" });
+      return;
+    }
+    const parsed = parseSpotFields(latitude, longitude, radiusM);
+    if (!parsed.ok) {
+      setFeedback({ type: "error", text: parsed.error });
+      return;
+    }
+
+    setBusy(true);
+    setFeedback(null);
+    try {
+      const res = await fetch("/api/admin/spots", {
+        method: "POST",
+        credentials: "same-origin",
+        headers: jsonHeaders,
+        body: JSON.stringify({
+          name: trimmedName,
+          spot_group: spotGroup,
+          latitude: parsed.lat,
+          longitude: parsed.lng,
+          radius_m: parsed.radius,
+        }),
+      });
+      if (res.status === 401) {
+        await onUnauthorized();
+        return;
+      }
+      const json = (await res.json()) as { error?: string; spot?: SpotRow };
+      if (!res.ok || !json.spot) {
+        setFeedback({ type: "error", text: json.error ?? "スポット作成に失敗しました。" });
+        return;
+      }
+
+      let reapplyMsg = "";
+      if (autoReapplyOnCreate) {
+        try {
+          const summary = await handleReapply(json.spot.id, false);
+          if (summary) reapplyMsg = `（自動再適用: ${summary}）`;
+        } catch (err) {
+          reapplyMsg = `（スポットは作成されましたが再適用失敗: ${(err as Error).message}）`;
+        }
+      }
+
+      setName("");
+      setLatitude("");
+      setLongitude("");
+      setRadiusM("50");
+      setFeedback({ type: "ok", text: `スポット「${trimmedName}」を登録しました。${reapplyMsg}` });
+      await onRefresh();
+    } catch {
+      setFeedback({ type: "error", text: "通信エラーが発生しました。" });
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const startEditing = (spot: SpotRow) => {
+    setEditingId(spot.id);
+    setEditName(spot.name);
+    setEditGroup(spot.spot_group);
+    setEditLat(String(spot.latitude));
+    setEditLng(String(spot.longitude));
+    setEditRadius(String(spot.radius_m));
+  };
+
+  const handleSaveEdit = async (id: string) => {
+    const trimmedName = editName.trim();
+    if (!trimmedName) {
+      setFeedback({ type: "error", text: "スポット名を入力してください。" });
+      return;
+    }
+    const parsed = parseSpotFields(editLat, editLng, editRadius);
+    if (!parsed.ok) {
+      setFeedback({ type: "error", text: parsed.error });
+      return;
+    }
+
+    setBusy(true);
+    setFeedback(null);
+    try {
+      const res = await fetch("/api/admin/spots", {
+        method: "PATCH",
+        credentials: "same-origin",
+        headers: jsonHeaders,
+        body: JSON.stringify({
+          id,
+          name: trimmedName,
+          spot_group: editGroup,
+          latitude: parsed.lat,
+          longitude: parsed.lng,
+          radius_m: parsed.radius,
+        }),
+      });
+      if (res.status === 401) {
+        await onUnauthorized();
+        return;
+      }
+      const json = (await res.json()) as { error?: string };
+      if (!res.ok) {
+        setFeedback({ type: "error", text: json.error ?? "スポット更新に失敗しました。" });
+        return;
+      }
+      setEditingId(null);
+      setFeedback({ type: "ok", text: "スポットを更新しました。必要に応じて再適用を実行してください。" });
+      await onRefresh();
+    } catch {
+      setFeedback({ type: "error", text: "通信エラーが発生しました。" });
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const handleDelete = async (spot: SpotRow) => {
+    if (!window.confirm(`スポット「${spot.name}」を削除しますか？`)) return;
+    setBusy(true);
+    setFeedback(null);
+    try {
+      const res = await fetch(`/api/admin/spots?id=${encodeURIComponent(spot.id)}`, {
+        method: "DELETE",
+        credentials: "same-origin",
+      });
+      if (res.status === 401) {
+        await onUnauthorized();
+        return;
+      }
+      if (!res.ok) {
+        setFeedback({ type: "error", text: "スポットの削除に失敗しました。" });
+        return;
+      }
+      setFeedback({ type: "ok", text: `「${spot.name}」を削除しました。` });
+      await onRefresh();
+    } catch {
+      setFeedback({ type: "error", text: "通信エラーが発生しました。" });
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const handleManualReapply = async (spot: SpotRow, includeAll: boolean) => {
+    if (
+      includeAll &&
+      !window.confirm("座標を持つ全過去セッションに対して入れ子スポット判定を再実行しますか？")
+    ) {
+      return;
+    }
+    setBusy(true);
+    setFeedback(null);
+    try {
+      const msg = await handleReapply(spot.id, includeAll);
+      if (msg) {
+        setFeedback({ type: "ok", text: `「${spot.name}」基準で再適用完了: ${msg}` });
+        await onRefresh();
+      }
+    } catch (err) {
+      setFeedback({ type: "error", text: (err as Error).message });
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const prefillFromSession = (s: AdminSessionDto) => {
+    if (s.latitude === null || s.longitude === null) return;
+    setLatitude(s.latitude.toFixed(6));
+    setLongitude(s.longitude.toFixed(6));
+    if (!name.trim()) {
+      setName("新スポット");
+    }
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
+  return (
+    <div className="space-y-6">
+      {feedback && (
+        <div
+          className={`rounded-xl border px-4 py-3 text-sm ${
+            feedback.type === "ok"
+              ? "border-emerald-500/40 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300"
+              : "border-red-500/40 bg-red-500/10 text-red-700 dark:text-red-300"
+          }`}
+        >
+          {feedback.text}
+        </div>
+      )}
+
+      {/* Create spot form */}
+      <form
+        onSubmit={handleCreate}
+        className="space-y-4 rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm dark:border-zinc-800 dark:bg-zinc-900/70"
+      >
+        <div>
+          <h2 className="text-sm font-semibold">スポットを登録（完全非公開・入れ子時は最小半径優先）</h2>
+          <p className="mt-0.5 text-xs text-zinc-500 dark:text-zinc-400">
+            公開ダッシュボードには「名前」のみ表示され、緯度・経度は公開 API に一切返却されません。
+          </p>
+        </div>
+
+        <div className="grid gap-3 sm:grid-cols-3">
+          <label className="flex flex-col gap-1 text-xs text-zinc-500 dark:text-zinc-400">
+            <span>表示名</span>
+            <input
+              type="text"
+              required
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="例: 大学図書館"
+              className="h-9 rounded-lg border border-zinc-200 bg-zinc-50 px-3 text-sm text-zinc-900 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100"
+            />
+          </label>
+
+          <label className="flex flex-col gap-1 text-xs text-zinc-500 dark:text-zinc-400">
+            <span>グループ</span>
+            <select
+              value={spotGroup}
+              onChange={(e) => setSpotGroup(e.target.value as SpotGroup)}
+              className="h-9 rounded-lg border border-zinc-200 bg-zinc-50 px-2.5 text-sm text-zinc-900 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100"
+            >
+              {SPOT_GROUPS.map((g) => (
+                <option key={g} value={g}>
+                  {g}
+                </option>
+              ))}
+            </select>
+          </label>
+
+          <label className="flex flex-col gap-1 text-xs text-zinc-500 dark:text-zinc-400">
+            <span>判定半径 (m)</span>
+            <input
+              type="number"
+              min={1}
+              max={50000}
+              required
+              value={radiusM}
+              onChange={(e) => setRadiusM(e.target.value)}
+              className="h-9 rounded-lg border border-zinc-200 bg-zinc-50 px-3 text-sm text-zinc-900 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100"
+            />
+          </label>
+
+          <label className="flex flex-col gap-1 text-xs text-zinc-500 dark:text-zinc-400">
+            <span>緯度 (Latitude)</span>
+            <input
+              type="text"
+              required
+              value={latitude}
+              onChange={(e) => setLatitude(e.target.value)}
+              placeholder="35.026200"
+              className="h-9 rounded-lg border border-zinc-200 bg-zinc-50 px-3 font-mono text-sm text-zinc-900 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100"
+            />
+          </label>
+
+          <label className="flex flex-col gap-1 text-xs text-zinc-500 dark:text-zinc-400">
+            <span>経度 (Longitude)</span>
+            <input
+              type="text"
+              required
+              value={longitude}
+              onChange={(e) => setLongitude(e.target.value)}
+              placeholder="135.780800"
+              className="h-9 rounded-lg border border-zinc-200 bg-zinc-50 px-3 font-mono text-sm text-zinc-900 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100"
+            />
+          </label>
+        </div>
+
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <label className="inline-flex items-center gap-2 text-xs text-zinc-600 dark:text-zinc-400">
+            <input
+              type="checkbox"
+              checked={autoReapplyOnCreate}
+              onChange={(e) => setAutoReapplyOnCreate(e.target.checked)}
+            />
+            登録と同時に「未登録座標セッション」へ自動再適用する
+          </label>
+
+          <button
+            type="submit"
+            disabled={busy}
+            className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-zinc-900 px-4 text-xs font-semibold text-white transition hover:bg-zinc-800 disabled:opacity-50 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-200"
+          >
+            <Plus className="h-3.5 w-3.5" />
+            スポットを登録
+          </button>
+        </div>
+      </form>
+
+      {/* Unregistered coordinate sessions (1-click prefill) */}
+      <section className="rounded-2xl border border-zinc-200 bg-white shadow-sm dark:border-zinc-800 dark:bg-zinc-900/70">
+        <div className="border-b border-zinc-200 px-5 py-3.5 dark:border-zinc-800">
+          <h3 className="text-sm font-semibold">
+            未登録座標のセッション ({unregisteredSessions.length})
+          </h3>
+          <p className="mt-0.5 text-xs text-zinc-500 dark:text-zinc-400">
+            外出先などで一時記録された座標を 1 クリックで上の登録フォームへ転記できます。
+          </p>
+        </div>
+
+        {unregisteredSessions.length === 0 ? (
+          <div className="p-6 text-center text-xs text-zinc-500 dark:text-zinc-400">
+            未登録座標のセッションはありません。
+          </div>
+        ) : (
+          <>
+            <ul className="divide-y divide-zinc-200 dark:divide-zinc-800">
+              {unregisteredSessions.slice(0, visibleUnregisteredCount).map((s) => (
+                <li key={s.id} className="flex flex-wrap items-center justify-between gap-3 px-5 py-3">
+                  <div className="space-y-0.5 text-xs">
+                    <div className="font-semibold">
+                      {s.category_name}（{formatJstDateHm(s.started_at)}）
+                    </div>
+                    <div className="font-mono text-zinc-500 dark:text-zinc-400">
+                      {s.latitude?.toFixed(6)}, {s.longitude?.toFixed(6)}
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => prefillFromSession(s)}
+                    className="inline-flex items-center gap-1.5 rounded-lg border border-blue-500/40 bg-blue-500/10 px-3 py-1.5 text-xs font-semibold text-blue-700 transition hover:bg-blue-500/20 dark:text-blue-300"
+                  >
+                    <MapPin className="h-3.5 w-3.5" />
+                    この座標からスポット登録
+                  </button>
+                </li>
+              ))}
+            </ul>
+            {unregisteredSessions.length > visibleUnregisteredCount && (
+              <div className="border-t border-zinc-200 px-5 py-3 text-center dark:border-zinc-800">
+                <button
+                  type="button"
+                  onClick={() => setVisibleUnregisteredCount((c) => c + 20)}
+                  className="rounded-lg border border-zinc-200 px-4 py-1.5 text-xs font-medium text-zinc-700 transition hover:bg-zinc-100 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-800"
+                >
+                  さらに表示（残り {unregisteredSessions.length - visibleUnregisteredCount} 件）
+                </button>
+              </div>
+            )}
+          </>
+        )}
+      </section>
+
+      {/* Registered spots list */}
+      <section className="rounded-2xl border border-zinc-200 bg-white shadow-sm dark:border-zinc-800 dark:bg-zinc-900/70">
+        <div className="border-b border-zinc-200 px-5 py-3.5 text-sm font-semibold dark:border-zinc-800">
+          登録済みスポット一覧 ({spots.length})
+        </div>
+
+        {spots.length === 0 ? (
+          <div className="p-6 text-center text-xs text-zinc-500 dark:text-zinc-400">
+            まだスポットが登録されていません。
+          </div>
+        ) : (
+          <ul className="divide-y divide-zinc-200 dark:divide-zinc-800">
+            {spots.map((spot) => {
+              const isEditing = editingId === spot.id;
+              return (
+                <li key={spot.id} className="p-4">
+                  {isEditing ? (
+                    <div className="space-y-3">
+                      <div className="grid gap-3 sm:grid-cols-3">
+                        <input
+                          type="text"
+                          value={editName}
+                          onChange={(e) => setEditName(e.target.value)}
+                          className="h-9 rounded-lg border border-zinc-200 bg-zinc-50 px-3 text-sm dark:border-zinc-700 dark:bg-zinc-950"
+                        />
+                        <select
+                          value={editGroup}
+                          onChange={(e) => setEditGroup(e.target.value as SpotGroup)}
+                          className="h-9 rounded-lg border border-zinc-200 bg-zinc-50 px-2.5 text-sm dark:border-zinc-700 dark:bg-zinc-950"
+                        >
+                          {SPOT_GROUPS.map((g) => (
+                            <option key={g} value={g}>
+                              {g}
+                            </option>
+                          ))}
+                        </select>
+                        <input
+                          type="number"
+                          min={1}
+                          max={50000}
+                          value={editRadius}
+                          onChange={(e) => setEditRadius(e.target.value)}
+                          className="h-9 rounded-lg border border-zinc-200 bg-zinc-50 px-3 text-sm dark:border-zinc-700 dark:bg-zinc-950"
+                        />
+                        <input
+                          type="text"
+                          value={editLat}
+                          onChange={(e) => setEditLat(e.target.value)}
+                          className="h-9 rounded-lg border border-zinc-200 bg-zinc-50 px-3 font-mono text-sm dark:border-zinc-700 dark:bg-zinc-950"
+                        />
+                        <input
+                          type="text"
+                          value={editLng}
+                          onChange={(e) => setEditLng(e.target.value)}
+                          className="h-9 rounded-lg border border-zinc-200 bg-zinc-50 px-3 font-mono text-sm dark:border-zinc-700 dark:bg-zinc-950"
+                        />
+                      </div>
+                      <div className="flex justify-end gap-2">
+                        <button
+                          type="button"
+                          onClick={() => setEditingId(null)}
+                          className="inline-flex items-center gap-1 rounded-lg border border-zinc-200 px-3 py-1.5 text-xs dark:border-zinc-700"
+                        >
+                          <X className="h-3.5 w-3.5" />
+                          取消
+                        </button>
+                        <button
+                          type="button"
+                          disabled={busy}
+                          onClick={() => void handleSaveEdit(spot.id)}
+                          className="inline-flex items-center gap-1 rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-blue-500 disabled:opacity-50"
+                        >
+                          <Save className="h-3.5 w-3.5" />
+                          保存
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="flex flex-wrap items-center justify-between gap-3">
+                      <div className="space-y-1">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <span className="text-sm font-semibold">{spot.name}</span>
+                          <span className="rounded bg-zinc-100 px-2 py-0.5 text-[11px] font-medium text-zinc-600 dark:bg-zinc-800 dark:text-zinc-300">
+                            {spot.spot_group}
+                          </span>
+                          <span className="rounded bg-blue-500/10 px-2 py-0.5 font-mono text-[11px] text-blue-600 dark:text-blue-400">
+                            半径 {spot.radius_m}m
+                          </span>
+                        </div>
+                        <div className="font-mono text-xs text-zinc-500 dark:text-zinc-400">
+                          {spot.latitude.toFixed(6)}, {spot.longitude.toFixed(6)}
+                        </div>
+                      </div>
+
+                      <div className="flex flex-wrap items-center gap-1.5">
+                        <button
+                          type="button"
+                          disabled={busy}
+                          onClick={() => void handleManualReapply(spot, false)}
+                          className="inline-flex h-8 items-center gap-1 rounded-lg border border-zinc-200 px-2.5 text-xs font-medium text-zinc-700 transition hover:bg-zinc-100 disabled:opacity-50 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-800"
+                        >
+                          <RefreshCw className="h-3 w-3" />
+                          未登録に再適用
+                        </button>
+                        <button
+                          type="button"
+                          disabled={busy}
+                          onClick={() => void handleManualReapply(spot, true)}
+                          className="inline-flex h-8 items-center gap-1 rounded-lg border border-zinc-200 px-2.5 text-xs font-medium text-zinc-700 transition hover:bg-zinc-100 disabled:opacity-50 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-800"
+                        >
+                          全件再適用
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => startEditing(spot)}
+                          aria-label="編集"
+                          className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-zinc-200 text-zinc-600 transition hover:bg-zinc-100 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-800"
+                        >
+                          <Pencil className="h-3.5 w-3.5" />
+                        </button>
+                        <button
+                          type="button"
+                          disabled={busy}
+                          onClick={() => void handleDelete(spot)}
+                          aria-label="削除"
+                          className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-red-500/30 text-red-600 transition hover:bg-red-500/10 disabled:opacity-50 dark:text-red-400"
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </li>
+              );
+            })}
+          </ul>
+        )}
+      </section>
+    </div>
+  );
+}

@@ -14,8 +14,11 @@ import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import type { AdminSessionDto, AppSettingsRow, CategoryRow, SpotRow } from "@/lib/types";
+import { CategoriesTab } from "./CategoriesTab";
 import { ControlTab } from "./ControlTab";
 import { SessionsTab } from "./SessionsTab";
+import { SettingsTab } from "./SettingsTab";
+import { SpotsTab } from "./SpotsTab";
 
 type AdminTabKey = "control" | "sessions" | "categories" | "spots" | "settings";
 
@@ -31,6 +34,7 @@ export function AdminShell({ onLogout }: AdminShellProps) {
   const [hasMoreSessions, setHasMoreSessions] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
   const [reviewSessions, setReviewSessions] = useState<AdminSessionDto[]>([]);
+  const [unregisteredSessions, setUnregisteredSessions] = useState<AdminSessionDto[]>([]);
   const [categories, setCategories] = useState<CategoryRow[]>([]);
   const [spots, setSpots] = useState<SpotRow[]>([]);
   const [settings, setSettings] = useState<AppSettingsRow | null>(null);
@@ -40,7 +44,9 @@ export function AdminShell({ onLogout }: AdminShellProps) {
   const loadAll = useCallback(async () => {
     const fetchOpts: RequestInit = { credentials: "same-origin", cache: "no-store" };
     try {
-      const fetchAllNeedsReview = async (): Promise<
+      const fetchAllFilteredSessions = async (
+        filterParam: "needs_review=true" | "unregistered_spot=true"
+      ): Promise<
         { unauthorized: true } | { unauthorized: false; sessions: AdminSessionDto[] }
       > => {
         const collected: AdminSessionDto[] = [];
@@ -48,11 +54,11 @@ export function AdminShell({ onLogout }: AdminShellProps) {
         const pageSize = 200;
         while (true) {
           const res = await fetch(
-            `/api/admin/sessions?needs_review=true&limit=${pageSize}&offset=${offset}`,
+            `/api/admin/sessions?${filterParam}&limit=${pageSize}&offset=${offset}`,
             fetchOpts
           );
           if (res.status === 401) return { unauthorized: true };
-          if (!res.ok) throw new Error("Failed to load review sessions");
+          if (!res.ok) throw new Error(`Failed to load ${filterParam} sessions`);
           const json = (await res.json()) as {
             sessions: AdminSessionDto[];
             has_more?: boolean;
@@ -64,9 +70,10 @@ export function AdminShell({ onLogout }: AdminShellProps) {
         return { unauthorized: false, sessions: collected };
       };
 
-      const [sessRes, reviewResult, catRes, spotRes, setRes] = await Promise.all([
+      const [sessRes, reviewResult, unregResult, catRes, spotRes, setRes] = await Promise.all([
         fetch(`/api/admin/sessions?limit=${SESSION_PAGE_SIZE}&offset=0`, fetchOpts),
-        fetchAllNeedsReview(),
+        fetchAllFilteredSessions("needs_review=true"),
+        fetchAllFilteredSessions("unregistered_spot=true"),
         fetch("/api/admin/categories", fetchOpts),
         fetch("/api/admin/spots", fetchOpts),
         fetch("/api/admin/settings", fetchOpts),
@@ -74,6 +81,7 @@ export function AdminShell({ onLogout }: AdminShellProps) {
 
       if (
         reviewResult.unauthorized ||
+        unregResult.unauthorized ||
         [sessRes, catRes, spotRes, setRes].some((r) => r.status === 401)
       ) {
         await onLogout();
@@ -99,6 +107,7 @@ export function AdminShell({ onLogout }: AdminShellProps) {
       setSessions(sessJson.sessions);
       setHasMoreSessions(Boolean(sessJson.has_more));
       setReviewSessions(reviewResult.sessions);
+      setUnregisteredSessions(unregResult.sessions);
       setCategories(catJson.categories);
       setSpots(spotJson.spots);
       setSettings(setJson.settings);
@@ -239,6 +248,7 @@ export function AdminShell({ onLogout }: AdminShellProps) {
           <SessionsTab
             sessions={sessions}
             reviewSessions={reviewSessions}
+            unregisteredSessions={unregisteredSessions}
             hasMore={hasMoreSessions}
             loadingMore={loadingMore}
             categories={categories}
@@ -247,13 +257,25 @@ export function AdminShell({ onLogout }: AdminShellProps) {
             onRefresh={loadAll}
             onUnauthorized={onLogout}
           />
+        ) : activeTab === "categories" ? (
+          <CategoriesTab
+            categories={categories}
+            onRefresh={loadAll}
+            onUnauthorized={onLogout}
+          />
+        ) : activeTab === "spots" ? (
+          <SpotsTab
+            spots={spots}
+            unregisteredSessions={unregisteredSessions}
+            onRefresh={loadAll}
+            onUnauthorized={onLogout}
+          />
         ) : (
-          <section className="rounded-2xl border border-zinc-200 bg-white p-8 text-center dark:border-zinc-800 dark:bg-zinc-900/70">
-            <h2 className="text-base font-semibold capitalize">{activeTab} タブ</h2>
-            <p className="mt-2 text-sm text-zinc-500 dark:text-zinc-400">
-              次の PR で Categories / Spots（未登録座標からの1クリック逆引き登録＆一括再適用） / Settings UI を追加予定です。
-            </p>
-          </section>
+          <SettingsTab
+            settings={settings}
+            onRefresh={loadAll}
+            onUnauthorized={onLogout}
+          />
         )}
       </main>
     </div>
