@@ -30,6 +30,14 @@ describe("admin validation helpers", () => {
     expect(
       validateUnivPeriods([{ key: "p1", label: "1限", start: "08:50", end: "10:20" }]).ok
     ).toBe(true);
+    // Overnight wrap-around is allowed
+    expect(
+      validateUnivPeriods([{ key: "late", label: "深夜", start: "23:00", end: "04:00" }]).ok
+    ).toBe(true);
+    // Identical start and end is rejected
+    expect(
+      validateUnivPeriods([{ key: "p1", label: "1限", start: "09:00", end: "09:00" }]).ok
+    ).toBe(false);
     expect(validateUnivPeriods([]).ok).toBe(false);
     expect(
       validateUnivPeriods([{ key: "p1", label: "1限", start: "25:00", end: "10:20" }]).ok
@@ -160,23 +168,37 @@ describe("/api/admin/* routes", () => {
             select: () => ({
               not: () => ({
                 not: () => ({
-                  is: async () => ({
-                    data: [
-                      {
-                        id: "s1",
-                        spot_id: null,
-                        location_label: "Other",
-                        latitude: 35.02635,
-                        longitude: 135.78095,
-                      },
-                    ],
-                    error: null,
+                  order: () => ({
+                    limit: () => ({
+                      is: async () => ({
+                        data: [
+                          {
+                            id: "s1",
+                            spot_id: null,
+                            location_label: "Other",
+                            latitude: 35.02635,
+                            longitude: 135.78095,
+                          },
+                          {
+                            id: "s2",
+                            spot_id: null,
+                            location_label: "Other",
+                            latitude: 35.02635,
+                            longitude: 135.78095,
+                          },
+                        ],
+                        error: null,
+                      }),
+                    }),
                   }),
                 }),
               }),
             }),
             update: (payload: { spot_id: string | null; location_label: string }) => ({
               eq: async (_col: string, id: string) => {
+                if (id === "s2") {
+                  return { error: { message: "db error" } };
+                }
                 updatedSessions.push({ id, ...payload });
                 return { error: null };
               },
@@ -195,8 +217,13 @@ describe("/api/admin/* routes", () => {
       { params: Promise.resolve({ id: "library" }) }
     );
 
-    expect(res.status).toBe(200);
-    expect(await res.json()).toEqual({ evaluated_count: 1, updated_count: 1 });
+    expect(res.status).toBe(500);
+    expect(await res.json()).toEqual({
+      evaluated_count: 2,
+      updated_count: 1,
+      failed_count: 1,
+      failed_session_ids: ["s2"],
+    });
     expect(updatedSessions).toEqual([
       { id: "s1", spot_id: "library", location_label: "大学図書館" },
     ]);

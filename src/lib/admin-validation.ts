@@ -59,6 +59,12 @@ export function validateUnivPeriods(
         error: `univ_periods[${i}] start and end must use HH:MM (00:00-23:59) format.`,
       };
     }
+    if (start === end) {
+      return {
+        ok: false,
+        error: `univ_periods[${i}] start and end cannot be identical.`,
+      };
+    }
 
     seenKeys.add(key);
     periods.push({ key, label, start, end });
