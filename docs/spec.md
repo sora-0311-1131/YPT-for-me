@@ -285,5 +285,6 @@ src/
     └── types.ts                  # 共有型定義（公開DTO / Admin DTO）
 supabase/
 └── migrations/
-    └── 0001_init.sql             # テーブル・インデックス・RLS・初期シード
+    ├── 20261125011957_init_schema.sql             # テーブル・インデックス・RLS・初期シード
+    └── 20261125012619_harden_triggers_and_updated_at.sql
 ```

@@ -24,24 +24,6 @@ create table if not exists public.app_settings (
   updated_at timestamptz not null default now()
 );
 
-create or replace function public.set_app_settings_updated_at()
-returns trigger
-language plpgsql
-set search_path = ''
-as $$
-begin
-  new.updated_at = now();
-  return new;
-end;
-$$;
-
-revoke all on function public.set_app_settings_updated_at() from public, anon, authenticated;
-
-create trigger app_settings_updated_at_trg
-  before update on public.app_settings
-  for each row
-  execute function public.set_app_settings_updated_at();
-
 -- 2. Study categories (5-track defaults, editable via /admin)
 create table if not exists public.categories (
   id uuid primary key default gen_random_uuid(),
@@ -127,8 +109,6 @@ begin
   return null;
 end;
 $$;
-
-revoke all on function public.bump_study_realtime_signal() from public, anon, authenticated;
 
 create trigger study_sessions_realtime_signal_trg
   after insert or update or delete on public.study_sessions
