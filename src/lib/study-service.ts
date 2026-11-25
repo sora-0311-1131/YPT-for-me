@@ -421,47 +421,57 @@ export interface StopStudyResponse {
   today_total_min: number;
 }
 
+async function findStoppedByEventId(
+  supabase: SupabaseClient,
+  clientEventId: string,
+  dayBoundaryHour: number,
+  fallbackRefDate: Date
+): Promise<StopStudyResponse | null> {
+  const { data: existing } = await supabase
+    .from("study_sessions")
+    .select("id, category_id, duration_sec, ended_at")
+    .eq("stop_event_id", clientEventId)
+    .maybeSingle();
+
+  if (!existing) {
+    return null;
+  }
+
+  const refDate = existing.ended_at ? new Date(existing.ended_at) : fallbackRefDate;
+  const [{ data: cat }, todayTotalMin] = await Promise.all([
+    supabase.from("categories").select("name").eq("id", existing.category_id).maybeSingle(),
+    computeTodayTotalMinutes(supabase, refDate, dayBoundaryHour),
+  ]);
+  const durationSec = existing.duration_sec ?? 0;
+
+  return {
+    status: "stopped",
+    already_exists: true,
+    session_id: existing.id,
+    category_name: cat?.name ?? "Unknown",
+    duration_sec: durationSec,
+    duration_min: Math.round(durationSec / 60),
+    today_total_min: todayTotalMin,
+  };
+}
+
 export async function stopStudySession(
   supabase: SupabaseClient,
   input: StopStudyInput
 ): Promise<ServiceResult<{ data: StopStudyResponse }>> {
   const settings = await getAppSettings(supabase);
+  const now = input.occurred_at ?? new Date();
 
   // 1. Idempotency check by stop_event_id
   if (input.client_event_id) {
-    const { data: existing } = await supabase
-      .from("study_sessions")
-      .select("id, category_id, duration_sec, ended_at")
-      .eq("stop_event_id", input.client_event_id)
-      .maybeSingle();
-
+    const existing = await findStoppedByEventId(
+      supabase,
+      input.client_event_id,
+      settings.day_boundary_hour,
+      now
+    );
     if (existing) {
-      const { data: cat } = await supabase
-        .from("categories")
-        .select("name")
-        .eq("id", existing.category_id)
-        .maybeSingle();
-
-      const refDate = existing.ended_at ? new Date(existing.ended_at) : new Date();
-      const todayTotalMin = await computeTodayTotalMinutes(
-        supabase,
-        refDate,
-        settings.day_boundary_hour
-      );
-      const durationSec = existing.duration_sec ?? 0;
-
-      return {
-        ok: true,
-        data: {
-          status: "stopped",
-          already_exists: true,
-          session_id: existing.id,
-          category_name: cat?.name ?? "Unknown",
-          duration_sec: durationSec,
-          duration_min: Math.round(durationSec / 60),
-          today_total_min: todayTotalMin,
-        },
-      };
+      return { ok: true, data: existing };
     }
   }
 
@@ -481,7 +491,7 @@ export async function stopStudySession(
 
   const session = activeRow as StudySessionRow;
   const startedAt = new Date(session.started_at);
-  const endedAt = input.occurred_at ?? new Date();
+  const endedAt = now;
 
   if (endedAt.getTime() < startedAt.getTime()) {
     return {
@@ -507,39 +517,32 @@ export async function stopStudySession(
 
   if (updateError) {
     if (updateError.code === "23505" && input.client_event_id) {
-      const { data: raced } = await supabase
-        .from("study_sessions")
-        .select("id, category_id, duration_sec, ended_at")
-        .eq("stop_event_id", input.client_event_id)
-        .maybeSingle();
+      const raced = await findStoppedByEventId(
+        supabase,
+        input.client_event_id,
+        settings.day_boundary_hour,
+        endedAt
+      );
       if (raced) {
-        const [{ data: cat }, todayTotalMin] = await Promise.all([
-          supabase.from("categories").select("name").eq("id", raced.category_id).maybeSingle(),
-          computeTodayTotalMinutes(
-            supabase,
-            raced.ended_at ? new Date(raced.ended_at) : endedAt,
-            settings.day_boundary_hour
-          ),
-        ]);
-        const racedDuration = raced.duration_sec ?? 0;
-        return {
-          ok: true,
-          data: {
-            status: "stopped",
-            already_exists: true,
-            session_id: raced.id,
-            category_name: cat?.name ?? "Unknown",
-            duration_sec: racedDuration,
-            duration_min: Math.round(racedDuration / 60),
-            today_total_min: todayTotalMin,
-          },
-        };
+        return { ok: true, data: raced };
       }
     }
     return { ok: false, status: 500, error: "Failed to stop study session." };
   }
 
   if (!updatedRow) {
+    // Concurrent duplicate stop with the same client_event_id may update 0 rows cleanly
+    if (input.client_event_id) {
+      const raced = await findStoppedByEventId(
+        supabase,
+        input.client_event_id,
+        settings.day_boundary_hour,
+        endedAt
+      );
+      if (raced) {
+        return { ok: true, data: raced };
+      }
+    }
     return { ok: false, status: 404, error: "No active study session found." };
   }
 
