@@ -7,6 +7,7 @@ import { ThemeToggle } from "@/components/ThemeToggle";
 import type { CategoryBreakdownItem, PublicDashboardResponse } from "@/lib/dashboard-service";
 import { getSupabaseBrowserClient } from "@/lib/supabase/client";
 import { addDaysToYmd, getLogicalDayBoundsUtc, getOverlapSeconds } from "@/lib/time";
+import { AnalyticsView } from "./AnalyticsView";
 import { CategoryBreakdown } from "./CategoryBreakdown";
 import { HistoryView } from "./HistoryView";
 import { KpiSummary } from "./KpiSummary";
@@ -258,12 +259,7 @@ export function DashboardShell() {
             refreshTick={refreshTick}
           />
         ) : (
-          <section className="rounded-2xl border border-zinc-200 bg-white p-8 text-center dark:border-zinc-800 dark:bg-zinc-900/70">
-            <h2 className="text-base font-semibold">Analytics タブ</h2>
-            <p className="mt-2 text-sm text-zinc-500 dark:text-zinc-400">
-              Phase 3 で GitHub 草カレンダー・曜日×時間帯ヒートマップ・大学時限別・スポット別・天気/気圧分析を追加予定です。
-            </p>
-          </section>
+          <AnalyticsView refreshTick={refreshTick} />
         )}
       </main>
     </div>
