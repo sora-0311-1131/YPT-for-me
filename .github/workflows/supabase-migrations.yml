@@ -1,0 +1,44 @@
+name: Supabase Migrations
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "supabase/**"
+      - ".github/workflows/supabase-migrations.yml"
+  push:
+    branches: [main]
+    paths:
+      - "supabase/**"
+      - ".github/workflows/supabase-migrations.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  migrations:
+    name: Verify Migrations on Clean DB
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Supabase CLI
+        uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      - name: Start local Supabase and apply migrations
+        run: supabase start --exclude studio,imgproxy,inbucket,edge-runtime,logflare,vector,supavisor
+
+      - name: Reset DB to verify clean replay of all migrations
+        run: supabase db reset --no-seed
+
+      - name: Stop local Supabase
+        if: always()
+        run: supabase stop
