@@ -28,6 +28,18 @@ export function formatJstTimeHm(iso: string): string {
   return `${h}:${m}`;
 }
 
+export function formatJstDateHm(iso: string): string {
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return "----/--/-- --:--";
+  const jst = new Date(date.getTime() + 9 * 60 * 60 * 1000);
+  const y = jst.getUTCFullYear();
+  const mo = String(jst.getUTCMonth() + 1).padStart(2, "0");
+  const d = String(jst.getUTCDate()).padStart(2, "0");
+  const h = String(jst.getUTCHours()).padStart(2, "0");
+  const mi = String(jst.getUTCMinutes()).padStart(2, "0");
+  return `${y}/${mo}/${d} ${h}:${mi}`;
+}
+
 export function formatWeatherLabel(weatherCode: number | null | undefined): string {
   const cat = getWeatherCategory(weatherCode);
   switch (cat) {

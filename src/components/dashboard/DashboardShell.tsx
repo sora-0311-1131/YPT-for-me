@@ -8,6 +8,7 @@ import type { CategoryBreakdownItem, PublicDashboardResponse } from "@/lib/dashb
 import { getSupabaseBrowserClient } from "@/lib/supabase/client";
 import { addDaysToYmd, getLogicalDayBoundsUtc, getOverlapSeconds } from "@/lib/time";
 import { CategoryBreakdown } from "./CategoryBreakdown";
+import { HistoryView } from "./HistoryView";
 import { KpiSummary } from "./KpiSummary";
 import { TimerCard } from "./TimerCard";
 
@@ -19,6 +20,7 @@ export function DashboardShell() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [nowMs, setNowMs] = useState<number>(() => Date.now());
+  const [refreshTick, setRefreshTick] = useState(0);
 
   const fetchDashboard = useCallback(async (signal?: AbortSignal) => {
     try {
@@ -28,6 +30,7 @@ export function DashboardShell() {
       }
       const json = (await res.json()) as PublicDashboardResponse;
       setData(json);
+      setRefreshTick((t) => t + 1);
       setError(null);
     } catch (err) {
       if ((err as Error).name === "AbortError") return;
@@ -213,7 +216,21 @@ export function DashboardShell() {
               <div className="h-32 animate-pulse rounded-2xl bg-zinc-200 dark:bg-zinc-900" />
             </div>
           </div>
-        ) : data && activeTab === "overview" ? (
+        ) : !data ? (
+          <section className="rounded-2xl border border-zinc-200 bg-white p-8 text-center dark:border-zinc-800 dark:bg-zinc-900/70">
+            <p className="text-sm text-zinc-500 dark:text-zinc-400">
+              データを取得できませんでした。再読み込みを試してください。
+            </p>
+            <button
+              type="button"
+              onClick={() => void fetchDashboard()}
+              className="mt-4 inline-flex items-center gap-1.5 rounded-lg bg-zinc-900 px-4 py-2 text-xs font-medium text-white transition hover:bg-zinc-800 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-200"
+            >
+              <RefreshCw className="h-3.5 w-3.5" />
+              再読み込み
+            </button>
+          </section>
+        ) : activeTab === "overview" ? (
           <div className="space-y-6">
             <TimerCard
               activeSession={data.active_session}
@@ -233,12 +250,13 @@ export function DashboardShell() {
             <CategoryBreakdown items={liveTodayCategories} />
           </div>
         ) : activeTab === "history" ? (
-          <section className="rounded-2xl border border-zinc-200 bg-white p-8 text-center dark:border-zinc-800 dark:bg-zinc-900/70">
-            <h2 className="text-base font-semibold">History タブ</h2>
-            <p className="mt-2 text-sm text-zinc-500 dark:text-zinc-400">
-              次の PR で日付・カテゴリ・場所フィルタ付きのセッション履歴一覧を追加予定です。
-            </p>
-          </section>
+          <HistoryView
+            initialSessions={data.recent_sessions}
+            categories={data.categories}
+            locations={data.locations}
+            univPeriods={data.settings_public.univ_periods}
+            refreshTick={refreshTick}
+          />
         ) : (
           <section className="rounded-2xl border border-zinc-200 bg-white p-8 text-center dark:border-zinc-800 dark:bg-zinc-900/70">
             <h2 className="text-base font-semibold">Analytics タブ</h2>
