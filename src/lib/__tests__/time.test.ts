@@ -4,6 +4,7 @@ import {
   getDayType,
   getLogicalDateJst,
   getLogicalDayBoundsUtc,
+  getOverlapSeconds,
   getUnivPeriod,
   isJapaneseHoliday,
 } from "../time";
@@ -63,6 +64,28 @@ describe("time utilities", () => {
     expect(getUnivPeriod(new Date("2026-11-24T16:45:00.000Z"), defaultPeriods)).toBe("late_night");
     // 10:25 JST (gap between 1st and 2nd period) -> null
     expect(getUnivPeriod(new Date("2026-11-25T01:25:00.000Z"), defaultPeriods)).toBeNull();
+  });
+
+  it("computes overlap seconds accurately across day boundaries", () => {
+    // 2026-11-25 logical day (boundary 4:00 JST) = 2026-11-24T19:00Z .. 2026-11-25T19:00Z
+    const bounds = getLogicalDayBoundsUtc("2026-11-25", 4);
+    const windowStart = new Date(bounds.startIso).getTime();
+    const windowEnd = new Date(bounds.endIso).getTime();
+
+    // Session started 03:30 JST (18:30Z) and currently 04:30 JST (19:30Z) -> 30 min (1800s) overlaps today
+    const startMs = new Date("2026-11-24T18:30:00.000Z").getTime();
+    const nowMs = new Date("2026-11-24T19:30:00.000Z").getTime();
+    expect(getOverlapSeconds(startMs, nowMs, windowStart, windowEnd)).toBe(1800);
+
+    // Completely outside window -> 0
+    expect(
+      getOverlapSeconds(
+        new Date("2026-11-24T10:00:00.000Z").getTime(),
+        new Date("2026-11-24T11:00:00.000Z").getTime(),
+        windowStart,
+        windowEnd
+      )
+    ).toBe(0);
   });
 
   it("calculates study streak accurately", () => {
