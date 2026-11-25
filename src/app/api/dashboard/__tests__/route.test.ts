@@ -1,3 +1,4 @@
+import type { SupabaseClient } from "@supabase/supabase-js";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { buildDashboardSummary } from "@/lib/dashboard-service";
 import { DEFAULT_APP_SETTINGS } from "@/lib/study-service";
@@ -143,6 +144,110 @@ describe("buildDashboardSummary", () => {
     });
 
     expect(summary.recent_sessions.map((s) => s.id)).toEqual(["s1"]);
+  });
+
+  it("extends streak past initial window even when today is not yet met", async () => {
+    // Now: 2026-11-25 14:00 JST (today = 2026-11-25 has 0 min -> not met)
+    // Initial 3-day window covers 2026-11-23..2026-11-25 (maxPossibleStreak = 2).
+    // Yesterday (11-24) and 11-23 both meet 30m -> triggers older chunk fetch for 11-20..11-22.
+    const now = new Date("2026-11-25T05:00:00.000Z");
+    const allRows = [
+      {
+        id: "s-22",
+        category_id: "cat-1",
+        location_label: "Home",
+        weather_code: null,
+        temperature_c: null,
+        pressure_hpa: null,
+        day_type: "weekend" as const,
+        univ_period: "period_1",
+        started_at: "2026-11-22T01:00:00.000Z",
+        ended_at: "2026-11-22T01:40:00.000Z",
+        duration_sec: 2400,
+      },
+      {
+        id: "s-23",
+        category_id: "cat-1",
+        location_label: "Home",
+        weather_code: null,
+        temperature_c: null,
+        pressure_hpa: null,
+        day_type: "holiday" as const,
+        univ_period: "period_1",
+        started_at: "2026-11-23T01:00:00.000Z",
+        ended_at: "2026-11-23T01:40:00.000Z",
+        duration_sec: 2400,
+      },
+      {
+        id: "s-24",
+        category_id: "cat-1",
+        location_label: "Home",
+        weather_code: null,
+        temperature_c: null,
+        pressure_hpa: null,
+        day_type: "weekday" as const,
+        univ_period: "period_1",
+        started_at: "2026-11-24T01:00:00.000Z",
+        ended_at: "2026-11-24T01:40:00.000Z",
+        duration_sec: 2400,
+      },
+    ];
+
+    let rangeFetchCalls = 0;
+    const fakeSupabase = {
+      from: (table: string) => {
+        if (table === "app_settings") {
+          return {
+            select: () => ({
+              eq: () => ({ maybeSingle: async () => ({ data: DEFAULT_APP_SETTINGS, error: null }) }),
+            }),
+          };
+        }
+        if (table === "categories") {
+          return {
+            select: () => ({
+              order: () => ({
+                order: async () => ({ data: categories, error: null }),
+              }),
+            }),
+          };
+        }
+        if (table === "study_sessions") {
+          return {
+            select: () => ({
+              is: () => ({ maybeSingle: async () => ({ data: null, error: null }) }),
+              gte: (_col: string, startIso: string) => {
+                let endIso: string | undefined;
+                const builder = {
+                  order: () => builder,
+                  limit: () => builder,
+                  lt: (_c: string, e: string) => {
+                    endIso = e;
+                    return builder;
+                  },
+                  gt: () => builder,
+                  then: (resolve: (v: { data: typeof allRows; error: null }) => void) => {
+                    rangeFetchCalls += 1;
+                    const filtered = allRows.filter(
+                      (r) => r.started_at >= startIso && (!endIso || r.started_at < endIso)
+                    );
+                    resolve({ data: filtered, error: null });
+                  },
+                };
+                return builder;
+              },
+            }),
+          };
+        }
+        throw new Error(`Unexpected table ${table}`);
+      },
+    } as unknown as SupabaseClient;
+
+    const { getPublicDashboardData: realGetPublicDashboardData } =
+      await vi.importActual<typeof import("@/lib/dashboard-service")>("@/lib/dashboard-service");
+    const result = await realGetPublicDashboardData(fakeSupabase, undefined, now, 3);
+    expect(rangeFetchCalls).toBe(2);
+    expect(result.streak_days).toBe(3);
   });
 });
 

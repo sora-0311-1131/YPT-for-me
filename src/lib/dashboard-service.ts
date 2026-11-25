@@ -282,11 +282,12 @@ async function fetchSanitizedSessionsInRange(
 export async function getPublicDashboardData(
   supabase: SupabaseClient,
   filters?: DashboardQueryOptions,
-  now: Date = new Date()
+  now: Date = new Date(),
+  streakChunkDays: number = STREAK_CHUNK_DAYS
 ): Promise<PublicDashboardResponse> {
   const settings = await getAppSettings(supabase);
   const todayLogicalDate = getLogicalDateJst(now, settings.day_boundary_hour);
-  let windowStartDate = addDaysToYmd(todayLogicalDate, -(STREAK_CHUNK_DAYS - 1));
+  let windowStartDate = addDaysToYmd(todayLogicalDate, -(streakChunkDays - 1));
   const { startIso: initialSinceIso } = getLogicalDayBoundsUtc(
     windowStartDate,
     settings.day_boundary_hour
@@ -315,8 +316,8 @@ export async function getPublicDashboardData(
     Pick<CategoryRow, "id" | "name" | "color" | "sort_order" | "is_archived">
   >;
 
-  // If the streak reaches the start of the loaded window, walk further back in 365-day chunks
-  // until the streak breaks or no older sessions exist.
+  // If the streak reaches the start of the loaded window (accounting for today not yet met -> loadedDays - 1),
+  // walk further back in chunks until the streak breaks or no older sessions exist.
   let summary = buildDashboardSummary({
     sessions: allSessions,
     activeRow: (activeRes.data as SanitizedSessionRow | null) ?? null,
@@ -326,13 +327,16 @@ export async function getPublicDashboardData(
     filters,
   });
 
-  let loadedDays = STREAK_CHUNK_DAYS;
-  while (summary.streak_days >= loadedDays) {
+  const todayMet = summary.today.completed_sec / 60 >= settings.streak_min_minutes;
+  let loadedDays = streakChunkDays;
+  let maxPossibleStreak = todayMet ? loadedDays : loadedDays - 1;
+
+  while (maxPossibleStreak > 0 && summary.streak_days >= maxPossibleStreak) {
     const prevWindowEndIso = getLogicalDayBoundsUtc(
       windowStartDate,
       settings.day_boundary_hour
     ).startIso;
-    windowStartDate = addDaysToYmd(windowStartDate, -STREAK_CHUNK_DAYS);
+    windowStartDate = addDaysToYmd(windowStartDate, -streakChunkDays);
     const prevWindowStartIso = getLogicalDayBoundsUtc(
       windowStartDate,
       settings.day_boundary_hour
@@ -347,7 +351,8 @@ export async function getPublicDashboardData(
       break;
     }
     allSessions.push(...olderBatch);
-    loadedDays += STREAK_CHUNK_DAYS;
+    loadedDays += streakChunkDays;
+    maxPossibleStreak = todayMet ? loadedDays : loadedDays - 1;
 
     summary = buildDashboardSummary({
       sessions: allSessions,
