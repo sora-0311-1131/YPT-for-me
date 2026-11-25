@@ -6,7 +6,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import type { CategoryBreakdownItem, PublicDashboardResponse } from "@/lib/dashboard-service";
 import { getSupabaseBrowserClient } from "@/lib/supabase/client";
-import { getLogicalDateJst } from "@/lib/time";
+import { addDaysToYmd, getLogicalDayBoundsUtc, getOverlapSeconds } from "@/lib/time";
 import { CategoryBreakdown } from "./CategoryBreakdown";
 import { KpiSummary } from "./KpiSummary";
 import { TimerCard } from "./TimerCard";
@@ -92,17 +92,29 @@ export function DashboardShell() {
     return Math.max(0, Math.floor((nowMs - startMs) / 1000));
   }, [activeStartedAt, nowMs]);
 
-  const activeBelongsToToday = useMemo(() => {
-    if (!data?.active_session) return false;
-    const startDate = new Date(data.active_session.started_at);
-    if (Number.isNaN(startDate.getTime())) return false;
-    return (
-      getLogicalDateJst(startDate, data.settings_public.day_boundary_hour) ===
-      data.today.logical_date
-    );
-  }, [data]);
+  const { activeTodaySec, activeWeekSec } = useMemo(() => {
+    if (!data?.active_session) {
+      return { activeTodaySec: 0, activeWeekSec: 0 };
+    }
+    const startMs = new Date(data.active_session.started_at).getTime();
+    if (Number.isNaN(startMs) || nowMs <= startMs) {
+      return { activeTodaySec: 0, activeWeekSec: 0 };
+    }
 
-  const activeTodaySec = activeBelongsToToday ? activeElapsedSec : 0;
+    const boundary = data.settings_public.day_boundary_hour;
+    const todayBounds = getLogicalDayBoundsUtc(data.today.logical_date, boundary);
+    const weekStartYmd = addDaysToYmd(data.today.logical_date, -6);
+    const weekStartBounds = getLogicalDayBoundsUtc(weekStartYmd, boundary);
+
+    const todayStartMs = new Date(todayBounds.startIso).getTime();
+    const todayEndMs = new Date(todayBounds.endIso).getTime();
+    const weekStartMs = new Date(weekStartBounds.startIso).getTime();
+
+    return {
+      activeTodaySec: getOverlapSeconds(startMs, nowMs, todayStartMs, todayEndMs),
+      activeWeekSec: getOverlapSeconds(startMs, nowMs, weekStartMs, todayEndMs),
+    };
+  }, [data, nowMs]);
 
   const liveTodayCategories = useMemo<CategoryBreakdownItem[]>(() => {
     if (!data) return [];
@@ -125,7 +137,7 @@ export function DashboardShell() {
   }, [data, activeTodaySec]);
 
   const liveTodayTotalSec = (data?.today.completed_sec ?? 0) + activeTodaySec;
-  const liveWeekTotalSec = (data?.week.completed_sec ?? 0) + activeElapsedSec;
+  const liveWeekTotalSec = (data?.week.completed_sec ?? 0) + activeWeekSec;
 
   return (
     <div className="min-h-screen bg-zinc-50 text-zinc-900 transition-colors dark:bg-zinc-950 dark:text-zinc-100">

@@ -201,6 +201,20 @@ export function getUnivPeriod(date: Date, periods: UnivPeriod[]): string | null 
 }
 
 /**
+ * Computes overlapping seconds between [startMs, endMs] and [windowStartMs, windowEndMs].
+ */
+export function getOverlapSeconds(
+  startMs: number,
+  endMs: number,
+  windowStartMs: number,
+  windowEndMs: number
+): number {
+  const overlapStart = Math.max(startMs, windowStartMs);
+  const overlapEnd = Math.min(endMs, windowEndMs);
+  return Math.max(0, Math.floor((overlapEnd - overlapStart) / 1000));
+}
+
+/**
  * Calculates consecutive study streak days ending at `todayLogicalDate` (or yesterday if today is not yet met).
  */
 export function calculateStreak(
