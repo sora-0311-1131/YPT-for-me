@@ -42,6 +42,13 @@ export interface SpotRow {
   created_at: string;
 }
 
+export interface UnregisteredWifiSsidItem {
+  ssid: string;
+  session_count: number;
+  last_seen_at: string;
+  last_location_label: string;
+}
+
 export interface StudySessionRow {
   id: string;
   category_id: string;

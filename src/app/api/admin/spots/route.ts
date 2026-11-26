@@ -1,8 +1,10 @@
 import { NextResponse } from "next/server";
 import { isValidSpotGroup, parseJsonObject } from "@/lib/admin-validation";
 import { isAuthorizedRequest, unauthorizedResponse } from "@/lib/auth";
+import { parseSpotWifiSsids } from "@/lib/geo";
 import { parseCoordinates, parseOptionalString } from "@/lib/study-service";
 import { getSupabaseAdmin } from "@/lib/supabase/server";
+import type { SpotRow, UnregisteredWifiSsidItem } from "@/lib/types";
 
 export async function GET(request: Request): Promise<NextResponse> {
   if (!isAuthorizedRequest(request)) {
@@ -10,16 +12,50 @@ export async function GET(request: Request): Promise<NextResponse> {
   }
 
   const supabase = getSupabaseAdmin();
-  const { data, error } = await supabase
-    .from("spots")
-    .select("*")
-    .order("created_at", { ascending: true });
+  const [{ data, error }, { data: wifiSessions }] = await Promise.all([
+    supabase.from("spots").select("*").order("created_at", { ascending: true }),
+    supabase
+      .from("study_sessions")
+      .select("wifi_ssid, location_label, started_at")
+      .not("wifi_ssid", "is", null)
+      .order("started_at", { ascending: false })
+      .limit(1000),
+  ]);
 
   if (error) {
     return NextResponse.json({ error: "Failed to load spots." }, { status: 500 });
   }
 
-  return NextResponse.json({ spots: data ?? [] }, { status: 200 });
+  const spots = (data ?? []) as SpotRow[];
+  const registeredSsids = new Set<string>();
+  for (const spot of spots) {
+    for (const ssid of parseSpotWifiSsids(spot.wifi_ssid)) {
+      registeredSsids.add(ssid);
+    }
+  }
+
+  const unregisteredMap = new Map<string, UnregisteredWifiSsidItem>();
+  for (const row of wifiSessions ?? []) {
+    const ssid = typeof row.wifi_ssid === "string" ? row.wifi_ssid.trim() : "";
+    if (!ssid || registeredSsids.has(ssid)) continue;
+    const existing = unregisteredMap.get(ssid);
+    if (existing) {
+      existing.session_count += 1;
+    } else {
+      unregisteredMap.set(ssid, {
+        ssid,
+        session_count: 1,
+        last_seen_at: row.started_at as string,
+        last_location_label: (row.location_label as string) || "Other",
+      });
+    }
+  }
+
+  const unregistered_wifi_ssids = Array.from(unregisteredMap.values()).sort(
+    (a, b) => b.session_count - a.session_count
+  );
+
+  return NextResponse.json({ spots, unregistered_wifi_ssids }, { status: 200 });
 }
 
 export async function POST(request: Request): Promise<NextResponse> {

@@ -1,13 +1,19 @@
 "use client";
 
-import { MapPin, Pencil, Plus, RefreshCw, Save, Trash2, Wifi, X } from "lucide-react";
+import { Link2, MapPin, Pencil, Plus, RefreshCw, Save, Trash2, Wifi, X } from "lucide-react";
 import { useState } from "react";
 import { formatJstDateHm } from "@/lib/format";
-import type { AdminSessionDto, SpotGroup, SpotRow } from "@/lib/types";
+import type {
+  AdminSessionDto,
+  SpotGroup,
+  SpotRow,
+  UnregisteredWifiSsidItem,
+} from "@/lib/types";
 
 interface SpotsTabProps {
   spots: SpotRow[];
   unregisteredSessions: AdminSessionDto[];
+  unregisteredWifiSsids: UnregisteredWifiSsidItem[];
   onRefresh: () => Promise<void>;
   onUnauthorized: () => Promise<void> | void;
 }
@@ -17,6 +23,7 @@ const SPOT_GROUPS: SpotGroup[] = ["Home", "Univ", "Cafe", "Other"];
 export function SpotsTab({
   spots,
   unregisteredSessions,
+  unregisteredWifiSsids,
   onRefresh,
   onUnauthorized,
 }: SpotsTabProps) {
@@ -38,6 +45,7 @@ export function SpotsTab({
 
   const [busy, setBusy] = useState(false);
   const [visibleUnregisteredCount, setVisibleUnregisteredCount] = useState(20);
+  const [linkSpotBySsid, setLinkSpotBySsid] = useState<Record<string, string>>({});
   const [feedback, setFeedback] = useState<{ type: "ok" | "error"; text: string } | null>(null);
 
   const jsonHeaders = { "Content-Type": "application/json" };
@@ -268,6 +276,67 @@ export function SpotsTab({
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
+  const prefillWifiOnly = (ssid: string) => {
+    setWifiSsid((prev) => {
+      const existing = prev
+        .split(",")
+        .map((v) => v.trim())
+        .filter(Boolean);
+      if (existing.includes(ssid)) return prev;
+      return [...existing, ssid].join(", ");
+    });
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
+  const handleLinkWifiToSpot = async (ssid: string) => {
+    const targetSpotId = linkSpotBySsid[ssid] || spots[0]?.id;
+    const spot = spots.find((sp) => sp.id === targetSpotId);
+    if (!spot) {
+      setFeedback({ type: "error", text: "紐づけ先のスポットを選択してください。" });
+      return;
+    }
+
+    const currentSsids = (spot.wifi_ssid ?? "")
+      .split(",")
+      .map((v) => v.trim())
+      .filter(Boolean);
+    const nextWifiSsid = currentSsids.includes(ssid)
+      ? currentSsids.join(", ")
+      : [...currentSsids, ssid].join(", ");
+
+    setBusy(true);
+    setFeedback(null);
+    try {
+      const res = await fetch("/api/admin/spots", {
+        method: "PATCH",
+        credentials: "same-origin",
+        headers: jsonHeaders,
+        body: JSON.stringify({
+          id: spot.id,
+          wifi_ssid: nextWifiSsid,
+        }),
+      });
+      if (res.status === 401) {
+        await onUnauthorized();
+        return;
+      }
+      const json = (await res.json()) as { error?: string };
+      if (!res.ok) {
+        setFeedback({ type: "error", text: json.error ?? "Wi-Fi SSID の紐づけに失敗しました。" });
+        return;
+      }
+      setFeedback({
+        type: "ok",
+        text: `Wi-Fi「${ssid}」をスポット「${spot.name}」に紐づけました。`,
+      });
+      await onRefresh();
+    } catch {
+      setFeedback({ type: "error", text: "通信エラーが発生しました。" });
+    } finally {
+      setBusy(false);
+    }
+  };
+
   return (
     <div className="space-y-6">
       {feedback && (
@@ -394,6 +463,91 @@ export function SpotsTab({
           </button>
         </div>
       </form>
+
+      {/* Unregistered Wi-Fi SSIDs (1-click link or prefill) */}
+      <section className="rounded-2xl border border-zinc-200 bg-white shadow-sm dark:border-zinc-800 dark:bg-zinc-900/70">
+        <div className="border-b border-zinc-200 px-5 py-3.5 dark:border-zinc-800">
+          <h3 className="flex items-center gap-1.5 text-sm font-semibold">
+            <Wifi className="h-4 w-4 text-emerald-500" />
+            未登録の Wi-Fi SSID ({unregisteredWifiSsids.length})
+          </h3>
+          <p className="mt-0.5 text-xs text-zinc-500 dark:text-zinc-400">
+            セッションで検出された未紐づけの Wi-Fi 名です。既存スポットへの紐づけや新規登録フォームへの転記ができます。
+          </p>
+        </div>
+
+        {unregisteredWifiSsids.length === 0 ? (
+          <div className="p-6 text-center text-xs text-zinc-500 dark:text-zinc-400">
+            未登録の Wi-Fi SSID はありません。
+          </div>
+        ) : (
+          <ul className="divide-y divide-zinc-200 dark:divide-zinc-800">
+            {unregisteredWifiSsids.map((item) => {
+              const selectedSpotId = linkSpotBySsid[item.ssid] || spots[0]?.id || "";
+              return (
+                <li
+                  key={item.ssid}
+                  className="flex flex-col justify-between gap-3 px-4 py-3 sm:flex-row sm:items-center sm:px-5"
+                >
+                  <div className="space-y-0.5 text-xs">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="font-mono text-sm font-semibold text-zinc-900 dark:text-zinc-100">
+                        {item.ssid}
+                      </span>
+                      <span className="rounded bg-zinc-100 px-1.5 py-0.5 font-mono text-[11px] text-zinc-600 dark:bg-zinc-800 dark:text-zinc-300">
+                        {item.session_count}回
+                      </span>
+                    </div>
+                    <div className="text-zinc-500 dark:text-zinc-400">
+                      最終: {formatJstDateHm(item.last_seen_at)}（@ {item.last_location_label}）
+                    </div>
+                  </div>
+
+                  <div className="flex flex-wrap items-center gap-2">
+                    {spots.length > 0 && (
+                      <>
+                        <select
+                          value={selectedSpotId}
+                          onChange={(e) =>
+                            setLinkSpotBySsid((prev) => ({
+                              ...prev,
+                              [item.ssid]: e.target.value,
+                            }))
+                          }
+                          aria-label={`${item.ssid} の紐づけ先スポット`}
+                          className="h-9 rounded-lg border border-zinc-200 bg-zinc-50 px-2.5 text-xs text-zinc-900 sm:h-8 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100"
+                        >
+                          {spots.map((sp) => (
+                            <option key={sp.id} value={sp.id}>
+                              {sp.name}
+                            </option>
+                          ))}
+                        </select>
+                        <button
+                          type="button"
+                          disabled={busy}
+                          onClick={() => void handleLinkWifiToSpot(item.ssid)}
+                          className="inline-flex h-9 items-center gap-1 rounded-lg border border-emerald-500/40 bg-emerald-500/10 px-3 text-xs font-semibold text-emerald-700 transition hover:bg-emerald-500/20 disabled:opacity-50 sm:h-8 dark:text-emerald-300"
+                        >
+                          <Link2 className="h-3.5 w-3.5" />
+                          紐づける
+                        </button>
+                      </>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => prefillWifiOnly(item.ssid)}
+                      className="inline-flex h-9 items-center gap-1 rounded-lg border border-zinc-200 px-2.5 text-xs font-medium text-zinc-700 transition hover:bg-zinc-100 sm:h-8 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-800"
+                    >
+                      新規フォームへ転記
+                    </button>
+                  </div>
+                </li>
+              );
+            })}
+          </ul>
+        )}
+      </section>
 
       {/* Unregistered coordinate sessions (1-click prefill) */}
       <section className="rounded-2xl border border-zinc-200 bg-white shadow-sm dark:border-zinc-800 dark:bg-zinc-900/70">

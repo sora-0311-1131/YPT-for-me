@@ -13,7 +13,13 @@ import {
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { ThemeToggle } from "@/components/ThemeToggle";
-import type { AdminSessionDto, AppSettingsRow, CategoryRow, SpotRow } from "@/lib/types";
+import type {
+  AdminSessionDto,
+  AppSettingsRow,
+  CategoryRow,
+  SpotRow,
+  UnregisteredWifiSsidItem,
+} from "@/lib/types";
 import { CategoriesTab } from "./CategoriesTab";
 import { ControlTab } from "./ControlTab";
 import { SessionsTab } from "./SessionsTab";
@@ -37,6 +43,7 @@ export function AdminShell({ onLogout }: AdminShellProps) {
   const [unregisteredSessions, setUnregisteredSessions] = useState<AdminSessionDto[]>([]);
   const [categories, setCategories] = useState<CategoryRow[]>([]);
   const [spots, setSpots] = useState<SpotRow[]>([]);
+  const [unregisteredWifiSsids, setUnregisteredWifiSsids] = useState<UnregisteredWifiSsidItem[]>([]);
   const [settings, setSettings] = useState<AppSettingsRow | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -100,7 +107,7 @@ export function AdminShell({ onLogout }: AdminShellProps) {
       ])) as [
         { sessions: AdminSessionDto[]; has_more?: boolean },
         { categories: CategoryRow[] },
-        { spots: SpotRow[] },
+        { spots: SpotRow[]; unregistered_wifi_ssids?: UnregisteredWifiSsidItem[] },
         { settings: AppSettingsRow },
       ];
 
@@ -110,6 +117,7 @@ export function AdminShell({ onLogout }: AdminShellProps) {
       setUnregisteredSessions(unregResult.sessions);
       setCategories(catJson.categories);
       setSpots(spotJson.spots);
+      setUnregisteredWifiSsids(spotJson.unregistered_wifi_ssids ?? []);
       setSettings(setJson.settings);
       setError(null);
     } catch {
@@ -266,6 +274,7 @@ export function AdminShell({ onLogout }: AdminShellProps) {
           <SpotsTab
             spots={spots}
             unregisteredSessions={unregisteredSessions}
+            unregisteredWifiSsids={unregisteredWifiSsids}
             onRefresh={loadAll}
             onUnauthorized={onLogout}
           />
