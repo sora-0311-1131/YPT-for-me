@@ -41,6 +41,7 @@ export async function POST(request: Request): Promise<NextResponse> {
     category_name: parseOptionalString(body.category_name) ?? null,
     memo: parseOptionalString(body.memo) ?? null,
     tag_id: parseOptionalString(body.tag_id) ?? null,
+    wifi_ssid: parseOptionalString(body.wifi_ssid) ?? null,
     latitude: coordsResult.latitude,
     longitude: coordsResult.longitude,
     occurred_at: occurredResult.date,

@@ -62,6 +62,8 @@ export async function POST(request: Request): Promise<NextResponse> {
     );
   }
 
+  const wifiSsid = parseOptionalString(body.wifi_ssid) ?? null;
+
   const supabase = getSupabaseAdmin();
   const { data, error } = await supabase
     .from("spots")
@@ -71,6 +73,7 @@ export async function POST(request: Request): Promise<NextResponse> {
       latitude: coords.latitude,
       longitude: coords.longitude,
       radius_m: radiusM,
+      wifi_ssid: wifiSsid,
     })
     .select("*")
     .single();
@@ -138,6 +141,9 @@ export async function PATCH(request: Request): Promise<NextResponse> {
       );
     }
     updates.radius_m = radiusM;
+  }
+  if (body.wifi_ssid !== undefined) {
+    updates.wifi_ssid = parseOptionalString(body.wifi_ssid) ?? null;
   }
 
   if (Object.keys(updates).length === 0) {

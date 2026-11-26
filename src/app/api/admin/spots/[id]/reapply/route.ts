@@ -58,9 +58,8 @@ export async function POST(request: Request, context: RouteContext): Promise<Nex
   while (true) {
     let sessionsQuery = supabase
       .from("study_sessions")
-      .select("id, spot_id, location_label, latitude, longitude")
-      .not("latitude", "is", null)
-      .not("longitude", "is", null)
+      .select("id, spot_id, location_label, latitude, longitude, wifi_ssid")
+      .or("and(latitude.not.is.null,longitude.not.is.null),wifi_ssid.not.is.null")
       .order("id", { ascending: true })
       .limit(PAGE_SIZE);
 
@@ -92,7 +91,7 @@ export async function POST(request: Request, context: RouteContext): Promise<Nex
 
     for (const row of rows) {
       evaluatedCount += 1;
-      const match = findMatchingSpot(row.latitude, row.longitude, spots);
+      const match = findMatchingSpot(row.latitude, row.longitude, spots, row.wifi_ssid);
       const nextSpotId = match?.spot.id ?? null;
       const nextLabel = match?.spot.name ?? "Other";
 

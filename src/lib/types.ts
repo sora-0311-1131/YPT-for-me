@@ -38,6 +38,7 @@ export interface SpotRow {
   latitude: number;
   longitude: number;
   radius_m: number;
+  wifi_ssid: string | null;
   created_at: string;
 }
 
@@ -48,11 +49,14 @@ export interface StudySessionRow {
   location_label: string;
   memo: string | null;
   tag_id: string | null;
+  wifi_ssid: string | null;
   latitude: number | null;
   longitude: number | null;
   weather_code: number | null;
   temperature_c: number | null;
   pressure_hpa: number | null;
+  pressure_diff_3h: number | null;
+  pressure_diff_6h: number | null;
   day_type: DayType | null;
   univ_period: string | null;
   needs_review: boolean;
@@ -66,7 +70,7 @@ export interface StudySessionRow {
 
 /**
  * Public-safe session DTO.
- * Never includes private coordinates (latitude / longitude), memos, or internal sync IDs.
+ * Never includes private coordinates (latitude / longitude), Wi-Fi SSIDs, memos, or internal sync IDs.
  */
 export interface PublicSessionDto {
   id: string;
@@ -77,6 +81,8 @@ export interface PublicSessionDto {
   weather_code: number | null;
   temperature_c: number | null;
   pressure_hpa: number | null;
+  pressure_diff_3h: number | null;
+  pressure_diff_6h: number | null;
   day_type: DayType | null;
   univ_period: string | null;
   started_at: string;
@@ -88,6 +94,7 @@ export interface AdminSessionDto extends PublicSessionDto {
   memo: string | null;
   spot_id: string | null;
   tag_id: string | null;
+  wifi_ssid: string | null;
   latitude: number | null;
   longitude: number | null;
   needs_review: boolean;
@@ -109,6 +116,8 @@ export function toPublicSessionDto(
     weather_code: row.weather_code,
     temperature_c: row.temperature_c,
     pressure_hpa: row.pressure_hpa,
+    pressure_diff_3h: row.pressure_diff_3h,
+    pressure_diff_6h: row.pressure_diff_6h,
     day_type: row.day_type,
     univ_period: row.univ_period,
     started_at: row.started_at,
@@ -126,6 +135,7 @@ export function toAdminSessionDto(
     memo: row.memo,
     spot_id: row.spot_id,
     tag_id: row.tag_id,
+    wifi_ssid: row.wifi_ssid,
     latitude: row.latitude,
     longitude: row.longitude,
     needs_review: row.needs_review,

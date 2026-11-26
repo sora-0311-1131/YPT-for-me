@@ -20,7 +20,7 @@ import {
 const PAGE_SIZE = 500;
 const STREAK_CHUNK_DAYS = 365;
 const PUBLIC_SESSION_COLUMNS =
-  "id, category_id, location_label, weather_code, temperature_c, pressure_hpa, day_type, univ_period, started_at, ended_at, duration_sec";
+  "id, category_id, location_label, weather_code, temperature_c, pressure_hpa, pressure_diff_3h, pressure_diff_6h, day_type, univ_period, started_at, ended_at, duration_sec";
 
 export interface CategoryBreakdownItem {
   category_id: string;
@@ -72,6 +72,8 @@ export type SanitizedSessionRow = Pick<
   | "weather_code"
   | "temperature_c"
   | "pressure_hpa"
+  | "pressure_diff_3h"
+  | "pressure_diff_6h"
   | "day_type"
   | "univ_period"
   | "started_at"
@@ -85,6 +87,7 @@ function toFullRowStub(row: SanitizedSessionRow): StudySessionRow {
     memo: null,
     spot_id: null,
     tag_id: null,
+    wifi_ssid: null,
     latitude: null,
     longitude: null,
     needs_review: false,

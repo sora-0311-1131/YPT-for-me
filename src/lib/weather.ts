@@ -4,14 +4,60 @@ export interface WeatherSnapshot {
   weather_code: number | null;
   temperature_c: number | null;
   pressure_hpa: number | null;
+  pressure_diff_3h: number | null;
+  pressure_diff_6h: number | null;
 }
 
 export type WeatherCategory = "sunny" | "cloudy" | "rainy" | "snowy" | "unknown";
 
 const DEFAULT_TIMEOUT_MS = 2000;
 
+function round1(value: number): number {
+  return Math.round(value * 10) / 10;
+}
+
+function computePressureDiffs(
+  currentPressure: number | null,
+  currentTime: unknown,
+  hourly: { time?: unknown; surface_pressure?: unknown } | undefined
+): { pressure_diff_3h: number | null; pressure_diff_6h: number | null } {
+  if (
+    currentPressure === null ||
+    !hourly ||
+    !Array.isArray(hourly.surface_pressure) ||
+    hourly.surface_pressure.length === 0
+  ) {
+    return { pressure_diff_3h: null, pressure_diff_6h: null };
+  }
+
+  const pressures = hourly.surface_pressure;
+  let anchorIdx = pressures.length - 1;
+
+  if (typeof currentTime === "string" && currentTime.length >= 13 && Array.isArray(hourly.time)) {
+    const hourKey = `${currentTime.slice(0, 13)}:00`;
+    const foundIdx = hourly.time.findIndex((t) => t === hourKey);
+    if (foundIdx >= 0) {
+      anchorIdx = foundIdx;
+    }
+  }
+
+  const diffAt = (hoursAgo: number): number | null => {
+    const idx = anchorIdx - hoursAgo;
+    if (idx < 0 || idx >= pressures.length) return null;
+    const prev = pressures[idx];
+    if (typeof prev !== "number" || !Number.isFinite(prev)) return null;
+    return round1(currentPressure - prev);
+  };
+
+  return {
+    pressure_diff_3h: diffAt(3),
+    pressure_diff_6h: diffAt(6),
+  };
+}
+
 /**
- * Fetches current weather snapshot from Open-Meteo (free, no API key required).
+ * Fetches current weather snapshot (plus 3h / 6h pressure deltas) from Open-Meteo
+ * (free, no API key required).
  * Non-blocking by design: returns null on timeout, HTTP error, or invalid payload
  * so study session check-in never fails due to upstream weather outages.
  */
@@ -37,6 +83,9 @@ export async function fetchWeatherSnapshot(
       latitude: String(latitude),
       longitude: String(longitude),
       current: "weather_code,temperature_2m,surface_pressure",
+      hourly: "surface_pressure",
+      past_hours: "7",
+      forecast_hours: "1",
       timezone: "Asia/Tokyo",
     });
 
@@ -54,8 +103,13 @@ export async function fetchWeatherSnapshot(
 
     const data = (await response.json()) as {
       current?: {
+        time?: unknown;
         weather_code?: unknown;
         temperature_2m?: unknown;
+        surface_pressure?: unknown;
+      };
+      hourly?: {
+        time?: unknown;
         surface_pressure?: unknown;
       };
     };
@@ -83,7 +137,19 @@ export async function fetchWeatherSnapshot(
       return null;
     }
 
-    return { weather_code, temperature_c, pressure_hpa };
+    const { pressure_diff_3h, pressure_diff_6h } = computePressureDiffs(
+      pressure_hpa,
+      data.current.time,
+      data.hourly
+    );
+
+    return {
+      weather_code,
+      temperature_c,
+      pressure_hpa,
+      pressure_diff_3h,
+      pressure_diff_6h,
+    };
   } catch {
     return null;
   } finally {

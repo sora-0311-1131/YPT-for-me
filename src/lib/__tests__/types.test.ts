@@ -8,11 +8,14 @@ const sampleRow: StudySessionRow = {
   location_label: "大学図書館",
   memo: "計算論レポート",
   tag_id: "pc_palmrest",
+  wifi_ssid: "Univ-Library-5G",
   latitude: 35.0262,
   longitude: 135.7808,
   weather_code: 0,
   temperature_c: 14.5,
   pressure_hpa: 1016.2,
+  pressure_diff_3h: -1.4,
+  pressure_diff_6h: -3.2,
   day_type: "weekday",
   univ_period: "period_2",
   needs_review: true,
@@ -25,27 +28,34 @@ const sampleRow: StudySessionRow = {
 };
 
 describe("session DTO mappers", () => {
-  it("strips private coordinates and internal fields from PublicSessionDto", () => {
+  it("strips private coordinates, Wi-Fi SSID, and internal fields from PublicSessionDto", () => {
     const dto = toPublicSessionDto(sampleRow, { name: "大学講義・課題", color: "#3B82F6" });
     const serialized = JSON.stringify(dto);
 
     expect(dto.location_label).toBe("大学図書館");
     expect(dto.category_name).toBe("大学講義・課題");
+    expect(dto.pressure_diff_3h).toBe(-1.4);
+    expect(dto.pressure_diff_6h).toBe(-3.2);
     expect(serialized).not.toContain("latitude");
     expect(serialized).not.toContain("longitude");
     expect(serialized).not.toContain("35.0262");
     expect(serialized).not.toContain("135.7808");
+    expect(serialized).not.toContain("wifi_ssid");
+    expect(serialized).not.toContain("Univ-Library-5G");
     expect(serialized).not.toContain("memo");
     expect(serialized).not.toContain("計算論レポート");
     expect(serialized).not.toContain("spot_id");
     expect(serialized).not.toContain("start_event_id");
   });
 
-  it("retains private coordinates, memo, and review flags in AdminSessionDto", () => {
+  it("retains private coordinates, Wi-Fi SSID, memo, and review flags in AdminSessionDto", () => {
     const dto = toAdminSessionDto(sampleRow, { name: "大学講義・課題", color: "#3B82F6" });
     expect(dto.memo).toBe("計算論レポート");
+    expect(dto.wifi_ssid).toBe("Univ-Library-5G");
     expect(dto.latitude).toBe(35.0262);
     expect(dto.longitude).toBe(135.7808);
+    expect(dto.pressure_diff_3h).toBe(-1.4);
+    expect(dto.pressure_diff_6h).toBe(-3.2);
     expect(dto.needs_review).toBe(true);
     expect(dto.spot_id).toBe("spot-1");
   });

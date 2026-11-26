@@ -19,6 +19,7 @@ export interface SyncStartEvent {
   category_name: string | null;
   memo: string | null;
   tag_id: string | null;
+  wifi_ssid: string | null;
   latitude: number | null;
   longitude: number | null;
   occurred_at: Date;
@@ -102,6 +103,7 @@ export function parseSyncEvents(
         category_name: categoryName,
         memo: parseOptionalString(obj.memo) ?? null,
         tag_id: parseOptionalString(obj.tag_id) ?? null,
+        wifi_ssid: parseOptionalString(obj.wifi_ssid) ?? null,
         latitude: coords.latitude,
         longitude: coords.longitude,
         occurred_at: occurred.date,
@@ -223,6 +225,7 @@ export async function syncStudyEvents(
         category_name: category.name,
         memo: event.memo,
         tag_id: event.tag_id,
+        wifi_ssid: event.wifi_ssid,
         latitude: event.latitude,
         longitude: event.longitude,
         occurred_at: event.occurred_at,

@@ -9,6 +9,7 @@ const makeSpot = (overrides: Partial<SpotRow>): SpotRow => ({
   latitude: 35.0262,
   longitude: 135.7808,
   radius_m: 50,
+  wifi_ssid: null,
   created_at: "2026-11-25T00:00:00.000Z",
   ...overrides,
 });
@@ -80,5 +81,39 @@ describe("geo utilities", () => {
     const home = makeSpot({ id: "home", name: "Home", radius_m: 50 });
     expect(findMatchingSpot(35.1, 135.9, [home])).toBeNull();
     expect(findMatchingSpot(null, null, [home])).toBeNull();
+  });
+
+  it("matches spot by Wi-Fi SSID (comma-separated) with higher priority than GPS", () => {
+    const campus = makeSpot({
+      id: "campus",
+      name: "大学キャンパス",
+      spot_group: "Univ",
+      latitude: 35.0262,
+      longitude: 135.7808,
+      radius_m: 300,
+    });
+    const circleRoom = makeSpot({
+      id: "circle",
+      name: "サークル部屋",
+      spot_group: "Univ",
+      latitude: 35.03,
+      longitude: 135.79,
+      radius_m: 30,
+      wifi_ssid: "A4-WiFi-5G, A4-WiFi-2.4G",
+    });
+
+    // Even when GPS falls inside campus (or is missing), matching Wi-Fi SSID wins
+    const matchWithGps = findMatchingSpot(35.0262, 135.7808, [campus, circleRoom], "A4-WiFi-2.4G");
+    expect(matchWithGps?.spot.id).toBe("circle");
+    expect(matchWithGps?.matched_by).toBe("wifi");
+
+    const matchWithoutGps = findMatchingSpot(null, null, [campus, circleRoom], "A4-WiFi-5G");
+    expect(matchWithoutGps?.spot.id).toBe("circle");
+    expect(matchWithoutGps?.matched_by).toBe("wifi");
+
+    // Non-matching Wi-Fi falls back to GPS
+    const fallback = findMatchingSpot(35.0262, 135.7808, [campus, circleRoom], "Other-WiFi");
+    expect(fallback?.spot.id).toBe("campus");
+    expect(fallback?.matched_by).toBe("gps");
   });
 });

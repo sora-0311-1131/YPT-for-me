@@ -1,6 +1,6 @@
 "use client";
 
-import { MapPin, Pencil, Plus, RefreshCw, Save, Trash2, X } from "lucide-react";
+import { MapPin, Pencil, Plus, RefreshCw, Save, Trash2, Wifi, X } from "lucide-react";
 import { useState } from "react";
 import { formatJstDateHm } from "@/lib/format";
 import type { AdminSessionDto, SpotGroup, SpotRow } from "@/lib/types";
@@ -25,6 +25,7 @@ export function SpotsTab({
   const [latitude, setLatitude] = useState("");
   const [longitude, setLongitude] = useState("");
   const [radiusM, setRadiusM] = useState("50");
+  const [wifiSsid, setWifiSsid] = useState("");
   const [autoReapplyOnCreate, setAutoReapplyOnCreate] = useState(true);
 
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -33,6 +34,7 @@ export function SpotsTab({
   const [editLat, setEditLat] = useState("");
   const [editLng, setEditLng] = useState("");
   const [editRadius, setEditRadius] = useState("50");
+  const [editWifiSsid, setEditWifiSsid] = useState("");
 
   const [busy, setBusy] = useState(false);
   const [visibleUnregisteredCount, setVisibleUnregisteredCount] = useState(20);
@@ -109,6 +111,7 @@ export function SpotsTab({
           latitude: parsed.lat,
           longitude: parsed.lng,
           radius_m: parsed.radius,
+          wifi_ssid: wifiSsid.trim() || null,
         }),
       });
       if (res.status === 401) {
@@ -135,6 +138,7 @@ export function SpotsTab({
       setLatitude("");
       setLongitude("");
       setRadiusM("50");
+      setWifiSsid("");
       setFeedback({ type: "ok", text: `スポット「${trimmedName}」を登録しました。${reapplyMsg}` });
       await onRefresh();
     } catch {
@@ -151,6 +155,7 @@ export function SpotsTab({
     setEditLat(String(spot.latitude));
     setEditLng(String(spot.longitude));
     setEditRadius(String(spot.radius_m));
+    setEditWifiSsid(spot.wifi_ssid ?? "");
   };
 
   const handleSaveEdit = async (id: string) => {
@@ -179,6 +184,7 @@ export function SpotsTab({
           latitude: parsed.lat,
           longitude: parsed.lng,
           radius_m: parsed.radius,
+          wifi_ssid: editWifiSsid.trim() || null,
         }),
       });
       if (res.status === 401) {
@@ -249,9 +255,13 @@ export function SpotsTab({
   };
 
   const prefillFromSession = (s: AdminSessionDto) => {
-    if (s.latitude === null || s.longitude === null) return;
-    setLatitude(s.latitude.toFixed(6));
-    setLongitude(s.longitude.toFixed(6));
+    if (s.latitude !== null && s.longitude !== null) {
+      setLatitude(s.latitude.toFixed(6));
+      setLongitude(s.longitude.toFixed(6));
+    }
+    if (s.wifi_ssid) {
+      setWifiSsid(s.wifi_ssid);
+    }
     if (!name.trim()) {
       setName("新スポット");
     }
@@ -350,6 +360,17 @@ export function SpotsTab({
               className="h-11 w-full rounded-lg border border-zinc-200 bg-zinc-50 px-3 font-mono text-base text-zinc-900 sm:h-9 sm:text-sm dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100"
             />
           </label>
+
+          <label className="flex flex-col gap-1 text-xs text-zinc-500 dark:text-zinc-400">
+            <span>Wi-Fi SSID（任意・カンマ区切り可・非公開）</span>
+            <input
+              type="text"
+              value={wifiSsid}
+              onChange={(e) => setWifiSsid(e.target.value)}
+              placeholder="例: Home-5G, Home-2.4G"
+              className="h-11 w-full rounded-lg border border-zinc-200 bg-zinc-50 px-3 font-mono text-base text-zinc-900 sm:h-9 sm:text-sm dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100"
+            />
+          </label>
         </div>
 
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -399,7 +420,15 @@ export function SpotsTab({
                       {s.category_name}（{formatJstDateHm(s.started_at)}）
                     </div>
                     <div className="font-mono text-zinc-500 dark:text-zinc-400">
-                      {s.latitude?.toFixed(6)}, {s.longitude?.toFixed(6)}
+                      {s.latitude !== null && s.longitude !== null
+                        ? `${s.latitude.toFixed(6)}, ${s.longitude.toFixed(6)}`
+                        : "座標なし"}
+                      {s.wifi_ssid && (
+                        <span className="ml-2 inline-flex items-center gap-1 rounded bg-zinc-100 px-1.5 py-0.5 text-[11px] text-zinc-600 dark:bg-zinc-800 dark:text-zinc-300">
+                          <Wifi className="h-3 w-3" />
+                          {s.wifi_ssid}
+                        </span>
+                      )}
                     </div>
                   </div>
                   <button
@@ -486,6 +515,13 @@ export function SpotsTab({
                           onChange={(e) => setEditLng(e.target.value)}
                           className="h-11 rounded-lg border border-zinc-200 bg-zinc-50 px-3 font-mono text-base sm:h-9 sm:text-sm dark:border-zinc-700 dark:bg-zinc-950"
                         />
+                        <input
+                          type="text"
+                          value={editWifiSsid}
+                          onChange={(e) => setEditWifiSsid(e.target.value)}
+                          placeholder="Wi-Fi SSID（任意・カンマ区切り可）"
+                          className="h-11 rounded-lg border border-zinc-200 bg-zinc-50 px-3 font-mono text-base sm:h-9 sm:text-sm dark:border-zinc-700 dark:bg-zinc-950"
+                        />
                       </div>
                       <div className="flex justify-end gap-2">
                         <button
@@ -518,6 +554,12 @@ export function SpotsTab({
                           <span className="rounded bg-blue-500/10 px-2 py-0.5 font-mono text-[11px] text-blue-600 dark:text-blue-400">
                             半径 {spot.radius_m}m
                           </span>
+                          {spot.wifi_ssid && (
+                            <span className="inline-flex items-center gap-1 rounded bg-emerald-500/10 px-2 py-0.5 font-mono text-[11px] text-emerald-700 dark:text-emerald-300">
+                              <Wifi className="h-3 w-3" />
+                              {spot.wifi_ssid}
+                            </span>
+                          )}
                         </div>
                         <div className="font-mono text-xs text-zinc-500 dark:text-zinc-400">
                           {spot.latitude.toFixed(6)}, {spot.longitude.toFixed(6)}

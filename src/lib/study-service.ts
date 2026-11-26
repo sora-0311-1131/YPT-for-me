@@ -252,6 +252,7 @@ export interface StartStudyInput {
   category_name?: string | null;
   memo?: string | null;
   tag_id?: string | null;
+  wifi_ssid?: string | null;
   latitude?: number | null;
   longitude?: number | null;
   occurred_at?: Date;
@@ -340,7 +341,12 @@ export async function startStudySession(
   ]);
 
   const spots = (spotsResult.data ?? []) as SpotRow[];
-  const spotMatch = findMatchingSpot(input.latitude ?? null, input.longitude ?? null, spots);
+  const spotMatch = findMatchingSpot(
+    input.latitude ?? null,
+    input.longitude ?? null,
+    spots,
+    input.wifi_ssid ?? null
+  );
 
   const dayType = getDayType(startedAt, settings.day_boundary_hour);
   const univPeriod = getUnivPeriod(startedAt, settings.univ_periods);
@@ -353,11 +359,14 @@ export async function startStudySession(
       location_label: spotMatch?.spot.name ?? "Other",
       memo: input.memo ?? null,
       tag_id: input.tag_id ?? null,
+      wifi_ssid: input.wifi_ssid ?? null,
       latitude: input.latitude ?? null,
       longitude: input.longitude ?? null,
       weather_code: weather?.weather_code ?? null,
       temperature_c: weather?.temperature_c ?? null,
       pressure_hpa: weather?.pressure_hpa ?? null,
+      pressure_diff_3h: weather?.pressure_diff_3h ?? null,
+      pressure_diff_6h: weather?.pressure_diff_6h ?? null,
       day_type: dayType,
       univ_period: univPeriod,
       start_event_id: input.client_event_id ?? null,

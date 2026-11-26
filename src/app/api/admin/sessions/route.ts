@@ -34,7 +34,9 @@ export async function GET(request: Request): Promise<NextResponse> {
     query = query.eq("needs_review", true);
   }
   if (unregisteredSpotOnly) {
-    query = query.is("spot_id", null).not("latitude", "is", null).not("longitude", "is", null);
+    query = query
+      .is("spot_id", null)
+      .or("and(latitude.not.is.null,longitude.not.is.null),wifi_ssid.not.is.null");
   }
 
   const [{ data: sessions, error: sessionsError }, { data: categories, error: catError }] =

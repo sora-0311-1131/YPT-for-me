@@ -223,6 +223,11 @@ export function HistoryView({
                           {formatWeatherLabel(session.weather_code)}
                           {session.temperature_c !== null &&
                             ` ${Math.round(session.temperature_c)}°C`}
+                          {(session.pressure_diff_6h ?? session.pressure_diff_3h) !== null && (
+                            <span className="font-mono text-[11px]">
+                              {` (Δ${(session.pressure_diff_6h ?? session.pressure_diff_3h)! > 0 ? "+" : ""}${(session.pressure_diff_6h ?? session.pressure_diff_3h)!.toFixed(1)}hPa)`}
+                            </span>
+                          )}
                         </span>
                       )}
                     </div>

@@ -16,20 +16,30 @@ interface TimerCardProps {
 function WeatherBadge({
   weatherCode,
   temperatureC,
+  pressureDiff6h,
+  pressureDiff3h,
 }: {
   weatherCode: number | null;
   temperatureC: number | null;
+  pressureDiff6h: number | null;
+  pressureDiff3h: number | null;
 }) {
   if (weatherCode === null && temperatureC === null) return null;
   const cat = getWeatherCategory(weatherCode);
   const Icon =
     cat === "sunny" ? Sun : cat === "rainy" ? CloudRain : cat === "snowy" ? CloudSnow : Cloud;
+  const diff = pressureDiff6h ?? pressureDiff3h;
+  const diffLabel =
+    diff !== null ? ` (${diff > 0 ? "+" : ""}${diff.toFixed(1)} hPa)` : null;
 
   return (
     <span className="inline-flex items-center gap-1.5 rounded-full border border-zinc-200 bg-zinc-100 px-3 py-1 text-xs font-medium text-zinc-700 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-300">
       <Icon className="h-3.5 w-3.5" />
       <span>{formatWeatherLabel(weatherCode)}</span>
       {temperatureC !== null && <span>{Math.round(temperatureC)}°C</span>}
+      {diffLabel && (
+        <span className="font-mono text-[11px] text-zinc-500 dark:text-zinc-400">{diffLabel}</span>
+      )}
     </span>
   );
 }
@@ -107,6 +117,8 @@ export function TimerCard({ activeSession, elapsedSec, longSessionWarnMin }: Tim
               <WeatherBadge
                 weatherCode={activeSession.weather_code}
                 temperatureC={activeSession.temperature_c}
+                pressureDiff6h={activeSession.pressure_diff_6h}
+                pressureDiff3h={activeSession.pressure_diff_3h}
               />
               <span className="text-xs text-zinc-500 dark:text-zinc-400">
                 開始 {formatJstTimeHm(activeSession.started_at)} JST

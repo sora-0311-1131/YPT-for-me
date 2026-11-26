@@ -41,19 +41,65 @@ export function haversineDistanceMeters(
 export interface SpotMatch {
   spot: SpotRow;
   distance_m: number;
+  matched_by: "wifi" | "gps";
 }
 
 /**
- * Matches a coordinate against registered spots.
- * When multiple spots contain the coordinate (nested spots such as a library inside a campus),
- * the spot with the smallest `radius_m` wins; ties are broken by shortest center distance.
+ * Splits a spot's comma-separated `wifi_ssid` field into trimmed non-empty SSIDs.
+ */
+export function parseSpotWifiSsids(wifiSsid: string | null | undefined): string[] {
+  if (!wifiSsid) return [];
+  return wifiSsid
+    .split(",")
+    .map((s) => s.trim())
+    .filter((s) => s.length > 0);
+}
+
+/**
+ * Matches a session against registered spots.
+ * Priority:
+ * 1. Exact Wi-Fi SSID match (if `wifiSsid` is provided and matches any comma-separated SSID on a spot).
+ *    When multiple spots share the same SSID, the spot with the smallest `radius_m` wins.
+ * 2. Coordinate geofence match: when multiple spots contain the coordinate (nested spots such as
+ *    a library inside a campus), the spot with the smallest `radius_m` wins; ties are broken by
+ *    shortest center distance.
  */
 export function findMatchingSpot(
   latitude: number | null | undefined,
   longitude: number | null | undefined,
-  spots: SpotRow[]
+  spots: SpotRow[],
+  wifiSsid?: string | null
 ): SpotMatch | null {
-  if (!isValidCoordinate(latitude, longitude) || spots.length === 0) {
+  if (spots.length === 0) {
+    return null;
+  }
+
+  const trimmedSsid = typeof wifiSsid === "string" ? wifiSsid.trim() : "";
+  const hasValidCoord = isValidCoordinate(latitude, longitude);
+
+  if (trimmedSsid.length > 0) {
+    let bestWifiMatch: SpotMatch | null = null;
+    for (const spot of spots) {
+      const ssids = parseSpotWifiSsids(spot.wifi_ssid);
+      if (ssids.includes(trimmedSsid)) {
+        const distance = hasValidCoord
+          ? haversineDistanceMeters(latitude as number, longitude as number, spot.latitude, spot.longitude)
+          : 0;
+        if (
+          !bestWifiMatch ||
+          spot.radius_m < bestWifiMatch.spot.radius_m ||
+          (spot.radius_m === bestWifiMatch.spot.radius_m && distance < bestWifiMatch.distance_m)
+        ) {
+          bestWifiMatch = { spot, distance_m: distance, matched_by: "wifi" };
+        }
+      }
+    }
+    if (bestWifiMatch) {
+      return bestWifiMatch;
+    }
+  }
+
+  if (!hasValidCoord) {
     return null;
   }
 
@@ -70,7 +116,7 @@ export function findMatchingSpot(
         spot.radius_m < bestMatch.spot.radius_m ||
         (spot.radius_m === bestMatch.spot.radius_m && distance < bestMatch.distance_m)
       ) {
-        bestMatch = { spot, distance_m: distance };
+        bestMatch = { spot, distance_m: distance, matched_by: "gps" };
       }
     }
   }

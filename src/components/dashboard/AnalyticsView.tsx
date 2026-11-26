@@ -1,6 +1,6 @@
 "use client";
 
-import { Calendar, Cloud, Clock, Gauge, MapPin } from "lucide-react";
+import { Calendar, Cloud, Clock, Gauge, MapPin, TrendingDown } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import type { CalendarDayItem, PublicAnalyticsResponse } from "@/lib/analytics-service";
 import { formatDurationHm } from "@/lib/format";
@@ -125,6 +125,7 @@ export function AnalyticsView({ refreshTick }: AnalyticsViewProps) {
   const maxSpotSec = Math.max(1, ...data.spots.map((s) => s.total_sec));
   const visibleWeather = data.weather.filter((w) => w.session_count > 0);
   const visiblePressure = data.pressure.filter((p) => p.session_count > 0);
+  const visiblePressureTrend = (data.pressure_trend ?? []).filter((p) => p.session_count > 0);
 
   return (
     <div className="space-y-4 sm:space-y-6">
@@ -406,6 +407,39 @@ export function AnalyticsView({ refreshTick }: AnalyticsViewProps) {
           )}
         </section>
       </div>
+
+      {/* 6. Pressure Change (6h / 3h delta) Correlation */}
+      <section className="rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm sm:p-6 dark:border-zinc-800 dark:bg-zinc-900/70">
+        <div className="flex items-center gap-2 text-sm font-semibold">
+          <TrendingDown className="h-4 w-4 text-rose-500" />
+          気圧変化別の集中傾向（6時間前比 / 3時間前比）
+        </div>
+
+        {visiblePressureTrend.length === 0 ? (
+          <p className="mt-4 text-xs text-zinc-500 dark:text-zinc-400">
+            気圧変化データ付きのセッションがありません。
+          </p>
+        ) : (
+          <div className="mt-4 grid grid-cols-2 gap-2.5 sm:grid-cols-4 sm:gap-3">
+            {visiblePressureTrend.map((p) => (
+              <div
+                key={p.key}
+                className="rounded-xl border border-zinc-200 bg-zinc-50 p-3 sm:p-3.5 dark:border-zinc-800 dark:bg-zinc-950"
+              >
+                <div className="text-xs font-semibold text-zinc-700 dark:text-zinc-300">
+                  {p.label}
+                </div>
+                <div className="mt-1 font-mono text-base font-bold tabular-nums sm:text-lg">
+                  {formatDurationHm(p.total_sec)}
+                </div>
+                <div className="mt-0.5 font-mono text-[11px] text-zinc-500 dark:text-zinc-400">
+                  平均 {formatDurationHm(p.avg_sec)} / {p.session_count}回
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </section>
     </div>
   );
 }

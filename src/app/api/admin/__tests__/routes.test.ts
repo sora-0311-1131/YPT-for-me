@@ -147,6 +147,7 @@ describe("/api/admin/* routes", () => {
                   latitude: 35.0262,
                   longitude: 135.7808,
                   radius_m: 300,
+                  wifi_ssid: null,
                   created_at: "2026-11-25T00:00:00Z",
                 },
                 {
@@ -156,6 +157,7 @@ describe("/api/admin/* routes", () => {
                   latitude: 35.0264,
                   longitude: 135.781,
                   radius_m: 40,
+                  wifi_ssid: null,
                   created_at: "2026-11-25T00:00:00Z",
                 },
               ],
@@ -166,29 +168,29 @@ describe("/api/admin/* routes", () => {
         if (table === "study_sessions") {
           return {
             select: () => ({
-              not: () => ({
-                not: () => ({
-                  order: () => ({
-                    limit: () => ({
-                      is: async () => ({
-                        data: [
-                          {
-                            id: "s1",
-                            spot_id: null,
-                            location_label: "Other",
-                            latitude: 35.02635,
-                            longitude: 135.78095,
-                          },
-                          {
-                            id: "s2",
-                            spot_id: null,
-                            location_label: "Other",
-                            latitude: 35.02635,
-                            longitude: 135.78095,
-                          },
-                        ],
-                        error: null,
-                      }),
+              or: () => ({
+                order: () => ({
+                  limit: () => ({
+                    is: async () => ({
+                      data: [
+                        {
+                          id: "s1",
+                          spot_id: null,
+                          location_label: "Other",
+                          latitude: 35.02635,
+                          longitude: 135.78095,
+                          wifi_ssid: null,
+                        },
+                        {
+                          id: "s2",
+                          spot_id: null,
+                          location_label: "Other",
+                          latitude: 35.02635,
+                          longitude: 135.78095,
+                          wifi_ssid: null,
+                        },
+                      ],
+                      error: null,
                     }),
                   }),
                 }),

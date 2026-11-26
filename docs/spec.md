@@ -106,10 +106,12 @@ flowchart TD
 | `latitude` | `double precision` | `not null` | 中心緯度（非公開） |
 | `longitude` | `double precision` | `not null` | 中心経度（非公開） |
 | `radius_m` | `int4` | `not null`, `default 50` | 判定半径（メートル） |
+| `wifi_ssid` | `text` | nullable | 紐づける Wi-Fi SSID（カンマ区切りで複数指定可・**完全非公開**） |
 | `created_at` | `timestamptz` | `not null`, `default now()` | 作成日時 |
 
-**入れ子スポットの判定優先ルール**:
-- 距離（Haversine）が `radius_m` 以下となるスポットをすべて抽出。
+**スポットの判定優先ルール**:
+- **Wi-Fi SSID 一致を最優先**: セッションに `wifi_ssid` が含まれ、登録スポットの `wifi_ssid`（カンマ区切り）と一致すれば GPS より優先して採用（複数一致時は最小 `radius_m` 優先）。
+- 一致する Wi-Fi がない場合、距離（Haversine）が `radius_m` 以下となるスポットをすべて抽出。
 - **最も `radius_m` が小さい（より限定的な）スポットを優先**（例: `大学キャンパス(300m)` より `大学図書館(40m)` を優先）。
 - 同じ `radius_m` の場合は中心座標からの距離が近い方を採用。
 
@@ -123,11 +125,14 @@ flowchart TD
 | `location_label` | `text` | `not null`, `default 'Other'` | 公開用場所ラベル |
 | `memo` | `text` | nullable | 任意の作業メモ（`/admin` から追記・編集） |
 | `tag_id` | `text` | nullable | トリガー識別子（`pc_palmrest`, `icoca_main`, `web_manual` 等） |
+| `wifi_ssid` | `text` | nullable | 打刻時の接続中 Wi-Fi SSID（**公開 API / UI に返却しない**） |
 | `latitude` | `double precision` | nullable | 打刻時の緯度（**公開 API / UI に返却しない**） |
 | `longitude` | `double precision` | nullable | 打刻時の経度（**公開 API / UI に返却しない**） |
 | `weather_code` | `int4` | nullable | WMO 天気コード（Open-Meteo 自動補完） |
 | `temperature_c` | `real` | nullable | 気温 ℃ |
 | `pressure_hpa` | `real` | nullable | 気圧 hPa |
+| `pressure_diff_3h` | `real` | nullable | 3時間前比の気圧変化量 hPa（Open-Meteo 自動補完） |
+| `pressure_diff_6h` | `real` | nullable | 6時間前比の気圧変化量 hPa（Open-Meteo 自動補完） |
 | `day_type` | `text` | nullable | `weekday` / `weekend` / `holiday`（JST 基準） |
 | `univ_period` | `text` | nullable | `morning` / `period_1`〜`period_5` / `lunch` / `after_school` / `late_night` |
 | `needs_review` | `boolean` | `not null`, `default false` | 要確認フラグ（オフライン競合での自動クローズ時や異常検知時に `true`） |

@@ -20,6 +20,7 @@ const CALENDAR_DAYS = 365;
 const MAX_HEATMAP_SPAN_MS = 48 * 60 * 60 * 1000;
 
 export type PressureBand = "low" | "normal" | "high" | "unknown";
+export type PressureTrend = "rapid_drop" | "dropping" | "stable" | "rising" | "unknown";
 
 export interface CalendarDayItem {
   date: string;
@@ -62,6 +63,7 @@ export interface PublicAnalyticsResponse {
   spots: GroupStatsItem[];
   weather: Array<GroupStatsItem<WeatherCategory>>;
   pressure: Array<GroupStatsItem<PressureBand>>;
+  pressure_trend: Array<GroupStatsItem<PressureTrend>>;
 }
 
 export function getPressureBand(pressureHpa: number | null | undefined): PressureBand {
@@ -71,6 +73,26 @@ export function getPressureBand(pressureHpa: number | null | undefined): Pressur
   if (pressureHpa < 1005) return "low";
   if (pressureHpa <= 1015) return "normal";
   return "high";
+}
+
+/**
+ * Classifies barometric pressure change using 6h delta (falling back to 3h delta).
+ */
+export function getPressureTrend(
+  pressureDiff6h: number | null | undefined,
+  pressureDiff3h?: number | null | undefined
+): PressureTrend {
+  const diff =
+    typeof pressureDiff6h === "number" && Number.isFinite(pressureDiff6h)
+      ? pressureDiff6h
+      : typeof pressureDiff3h === "number" && Number.isFinite(pressureDiff3h)
+        ? pressureDiff3h
+        : null;
+  if (diff === null) return "unknown";
+  if (diff <= -3) return "rapid_drop";
+  if (diff <= -1) return "dropping";
+  if (diff < 1) return "stable";
+  return "rising";
 }
 
 function getCalendarLevel(totalSec: number, goalSec: number): 0 | 1 | 2 | 3 | 4 {
@@ -94,6 +116,14 @@ const PRESSURE_LABELS: Record<PressureBand, string> = {
   low: "低気圧 (<1005 hPa)",
   normal: "通常 (1005–1015 hPa)",
   high: "高気圧 (>1015 hPa)",
+  unknown: "データなし",
+};
+
+const PRESSURE_TREND_LABELS: Record<PressureTrend, string> = {
+  rapid_drop: "急降下 (≤ -3 hPa)",
+  dropping: "やや低下 (-3〜-1 hPa)",
+  stable: "安定 (-1〜+1 hPa)",
+  rising: "上昇 (≥ +1 hPa)",
   unknown: "データなし",
 };
 
@@ -134,6 +164,13 @@ export function buildAnalyticsSummary(params: {
     ["low", { total_sec: 0, session_count: 0 }],
     ["normal", { total_sec: 0, session_count: 0 }],
     ["high", { total_sec: 0, session_count: 0 }],
+    ["unknown", { total_sec: 0, session_count: 0 }],
+  ]);
+  const pressureTrendAgg = new Map<PressureTrend, { total_sec: number; session_count: number }>([
+    ["rapid_drop", { total_sec: 0, session_count: 0 }],
+    ["dropping", { total_sec: 0, session_count: 0 }],
+    ["stable", { total_sec: 0, session_count: 0 }],
+    ["rising", { total_sec: 0, session_count: 0 }],
     ["unknown", { total_sec: 0, session_count: 0 }],
   ]);
 
@@ -210,6 +247,12 @@ export function buildAnalyticsSummary(params: {
     const pBucket = pressureAgg.get(pBand)!;
     pBucket.total_sec += row.duration_sec;
     pBucket.session_count += 1;
+
+    // Pressure trend (6h / 3h delta) breakdown
+    const pTrend = getPressureTrend(row.pressure_diff_6h, row.pressure_diff_3h);
+    const ptBucket = pressureTrendAgg.get(pTrend)!;
+    ptBucket.total_sec += row.duration_sec;
+    ptBucket.session_count += 1;
   }
 
   const weekdayGoalSec = settings.daily_goal_weekday_min * 60;
@@ -282,6 +325,19 @@ export function buildAnalyticsSummary(params: {
     };
   });
 
+  const pressure_trend: Array<GroupStatsItem<PressureTrend>> = (
+    ["rapid_drop", "dropping", "stable", "rising", "unknown"] as const
+  ).map((key) => {
+    const val = pressureTrendAgg.get(key)!;
+    return {
+      key,
+      label: PRESSURE_TREND_LABELS[key],
+      total_sec: val.total_sec,
+      session_count: val.session_count,
+      avg_sec: val.session_count > 0 ? Math.round(val.total_sec / val.session_count) : 0,
+    };
+  });
+
   return {
     days,
     today_logical_date: todayLogicalDate,
@@ -293,6 +349,7 @@ export function buildAnalyticsSummary(params: {
     spots,
     weather,
     pressure,
+    pressure_trend,
   };
 }
 

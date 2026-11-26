@@ -453,6 +453,11 @@ export function SessionsTab({
                               {s.tag_id}
                             </span>
                           )}
+                          {s.wifi_ssid && (
+                            <span className="rounded bg-emerald-500/10 px-1.5 py-0.5 font-mono text-[10px] text-emerald-700 dark:text-emerald-300">
+                              Wi-Fi: {s.wifi_ssid}
+                            </span>
+                          )}
                         </div>
                         <div className="font-mono text-xs text-zinc-500 dark:text-zinc-400">
                           {formatJstDateHm(s.started_at)} 〜{" "}
